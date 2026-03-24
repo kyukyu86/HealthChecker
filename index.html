@@ -282,7 +282,7 @@ body {
 .dot-none    { background: var(--border2); }
 
 /* ── Detail Panel ── */
-.detail { flex: 1; overflow-y: auto; overflow-x: auto; background: var(--bg); }
+.detail { flex: 1; overflow-y: auto; overflow-x: scroll; background: var(--bg); }
 .detail::-webkit-scrollbar { width: 4px; height: 4px; }
 .detail::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
 
@@ -313,7 +313,7 @@ body {
 .search-input:focus { outline: none; border-color: var(--blue); }
 
 /* 전체 항목 테이블 뷰 */
-.table-view { padding: 20px 24px; min-width: max-content; }
+.table-view { padding: 20px 24px; }
 
 /* 수동 항목 뱃지 */
 .tag-m { font-size: 9px; padding: 1px 5px; border-radius: 8px;
@@ -372,11 +372,11 @@ body {
   line-height: 1;
 }
 .btn-nr-cl:hover { background: var(--red-bg); color: var(--red); border-color: var(--red); }
-.tv-cat { margin-bottom: 20px; padding-top: 4px; }
+.tv-cat { margin-bottom: 20px; padding-top: 4px; min-width: 100%; }
 .tv-cat-card { background: var(--surface); }
 .tv-cat-header {
   display: flex; align-items: center; gap: 0;
-  padding: 0 0 10px;
+  padding: 0 0 10px; min-width: fit-content;
 }
 .tv-cat-header-bar {
   width: 3px; height: 22px; border-radius: 0;
@@ -549,7 +549,7 @@ body {
   padding: 4px 8px; border-radius: var(--radius);
   border: 0.5px solid var(--border2); font-size: 11px;
   font-family: inherit; background: var(--surface); color: var(--text2);
-  width: 72px;
+  width: 130px;
 }
 
 /* ── Setup Banner ── */
@@ -650,7 +650,7 @@ body {
       <button class="btn" style="width:100%;font-size:12px;" onclick="addCategory()">+ 카테고리 추가</button>
     </div>
   </div>
-  <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+  <div style="flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden;">
     <div class="detail-topbar">
       <div class="year-chips" id="yearChips"></div>
       <div class="search-wrap">
@@ -2082,14 +2082,15 @@ function renderTableView() {
     return w;
   }
   const maxNameW = ITEMS.reduce((mx, i) => Math.max(mx, measureText(i.name)), 80);
-  const nameColW = Math.round(maxNameW * 1.1) + 24; // 110% + padding
+  const nameColW = Math.round(maxNameW * 0.6) + 12; // 항목-정상범위 간격 축소
+  const refOffset = Math.round(nameColW / 2); // 정상범위 간격 조정용
   document.documentElement.style.setProperty('--tv-name-w', nameColW + 'px');
 
   // 연도 헤더
   const yearHeaders = visYears.map(y =>
     `<th>${y}${y === latestY ? ' ★' : ''}</th>`).join('');
 
-  let html = '<div class="table-view">';
+  let html = '<div class="table-view" style="min-width:max-content;">';
 
   for (const cat of CATEGORIES) {
     const kw = searchKeyword.toLowerCase();
@@ -2135,7 +2136,7 @@ function renderTableView() {
             </span>
           </span>
         </td>
-        <td style="color:var(--text3);font-size:11px">${fmtRef(item)}</td>
+        <td style="color:var(--text3);font-size:11px;padding-left:0;">${fmtRef(item)}</td>
         ${cells}
         <td style="width:100%"></td>
       </tr>`;
@@ -2150,13 +2151,13 @@ function renderTableView() {
       <div class="tv-cat-card"><table class="tv-table" id="tbl-${cat.id}">
         <thead><tr style="background:var(--surface2)">
         <colgroup>
-          <col style="width:${nameColW}px"><col style="width:72px">
+          <col style="width:${nameColW}px"><col style="width:130px">
           ${visYears.map(() => '<col style="width:110px">').join('')}
           <col>
         </colgroup>
         <thead><tr>
           <th style="padding:7px 14px;font-size:11px;font-weight:500;color:var(--text3);border-bottom:0.5px solid var(--border)">항목</th>
-          <th style="padding:7px 14px;font-size:11px;font-weight:500;color:var(--text3);border-bottom:0.5px solid var(--border)">정상범위</th>
+          <th style="padding:7px 0 7px 0;font-size:11px;font-weight:500;color:var(--text3);border-bottom:0.5px solid var(--border)">정상범위</th>
           ${visYears.map(y => `<th style="padding:7px 14px;font-size:11px;font-weight:500;color:var(--text3);border-bottom:0.5px solid var(--border)">${y}${y === latestY ? ' ★' : ''}</th>`).join('')}
           <th style="width:100%;border-bottom:0.5px solid var(--border)"></th>
         </tr></thead>
