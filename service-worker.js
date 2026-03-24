@@ -42,6 +42,6 @@ self.addEventListener('fetch', e => {
         caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
         return response;
       });
-    }).catch(() => caches.match('/health-checkup/index.html'))
+    }).catch(() => caches.match('/HealthChecker/index.html'))
   );
 });
