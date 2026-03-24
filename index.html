@@ -23,7 +23,7 @@
 /* ── 설정: 여기에 클라이언트 ID를 입력하세요 ── */
 /* CLIENT_ID는 아래 <script> 상단에 있습니다   */
 
-:root {
+:root, [data-theme="light"] {
   --bg:       #f5f5f3;
   --surface:  #ffffff;
   --surface2: #f0efed;
@@ -44,8 +44,7 @@
   --radius-lg:14px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
+[data-theme="dark"] {
     --bg:       #1c1c1a;
     --surface:  #252522;
     --surface2: #2e2e2b;
@@ -63,7 +62,6 @@
     --red:      #e86060;
     --red-bg:   #2e1010;
   }
-}
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -87,6 +85,60 @@ body {
   flex-shrink: 0;
 }
 .toolbar-logo { font-size: 14px; font-weight: 600; letter-spacing: -0.3px; margin-right: 4px; }
+
+/* ── 터치 기기: hover 없으므로 버튼 항상 표시 ── */
+@media (hover: none) {
+  .cat-del-btn { opacity: 0.5 !important; }
+  .cat-del-btn:active { background: var(--red-bg); color: var(--red); opacity: 1 !important; }
+  .item-del { opacity: 0.4 !important; }
+  .item-del:active { background: var(--red-bg); color: var(--red); opacity: 1 !important; }
+  .row-actions { opacity: 1 !important; }
+  .ic { opacity: 0.5; }
+  .ic:active { opacity: 1; background: var(--surface2); }
+  .ic-del:active { background: var(--red-bg); color: var(--red); }
+  .chip-del { opacity: 0.6 !important; }
+  .drag-handle { color: var(--text3) !important; }
+  .btn-add-item { opacity: 1 !important; }
+}
+
+/* ── 모바일 반응형 ── */
+@media (max-width: 768px) {
+  /* 툴바: 2줄로 */
+  .toolbar {
+    padding: 0 12px; height: auto;
+    flex-wrap: wrap; gap: 0;
+    padding: 8px 12px;
+  }
+  .toolbar-logo { font-size: 13px; flex: 1; }
+  .toolbar-actions {
+    display: flex; align-items: center;
+    gap: 6px; flex-wrap: nowrap;
+  }
+  #loadBtn, #saveBtn { font-size: 11px; padding: 4px 8px; }
+  #addYearBtn { font-size: 11px; padding: 4px 8px; }
+
+  /* 바디: 세로 분할 */
+  .body { flex-direction: column; }
+  .sidebar-wrap {
+    width: 100% !important; height: auto;
+    flex-direction: column; flex-shrink: 0;
+    border-right: none !important;
+    border-bottom: 1px solid var(--border);
+    max-height: 160px; overflow-y: auto;
+  }
+  .sidebar { overflow-y: auto; }
+
+  /* 우측 */
+  .detail-topbar { padding: 8px 12px; flex-wrap: wrap; gap: 6px; }
+  .search-wrap { width: 100%; }
+  .search-input { flex: 1; width: 100%; }
+  .table-view { padding: 8px; }
+  .btn { font-size: 11px; padding: 5px 8px; }
+
+  /* 테이블 가로 스크롤 */
+  .tv-cat-card { overflow-x: auto; }
+  .tv-table { min-width: 400px; }
+}
 .year-chips { display: flex; gap: 5px; align-items: center; flex-wrap: nowrap; overflow-x: auto; }
 .year-chips::-webkit-scrollbar { display: none; }
 .detail-chips { display: flex; gap: 5px; align-items: center; flex-wrap: nowrap; overflow-x: auto; }
@@ -570,10 +622,10 @@ body {
   <span class="toolbar-logo">🩺 건강검진 트래커</span>
   <div class="ml-auto"></div>
   <div class="toolbar-actions">
-    <div id="authArea"></div>
     <button class="btn" onclick="driveLoad()" id="loadBtn" title="Drive에서 데이터 불러오기">↓ 불러오기</button>
     <button class="btn" onclick="driveSave()" id="saveBtn" title="Drive에 데이터 저장">↑ 저장</button>
-    <button class="btn btn-primary" onclick="openFilePicker()" id="addYearBtn">+ 파일 추가</button>
+    <button class="btn btn-primary" onclick="openFilePicker()" id="addYearBtn" style="white-space:nowrap">+ 파일 추가</button>
+    <div id="authArea" style="flex-shrink:0"></div>
   </div>
 </div>
 
@@ -582,8 +634,8 @@ body {
   ⚠️ CLIENT_ID가 설정되지 않았습니다. 이 파일을 텍스트 편집기로 열고 상단 <strong>CLIENT_ID</strong>를 입력하세요.
 </div>
 
-<div class="body">
-  <div class="sidebar-wrap" style="width:253px;flex-shrink:0;display:flex;flex-direction:column;background:var(--surface);border-right:1px solid var(--border);">
+<div class="body" id="mainBody">
+  <div class="sidebar-wrap" id="sidebarWrap" style="width:253px;flex-shrink:0;display:flex;flex-direction:column;background:var(--surface);border-right:1px solid var(--border);">
     <div class="sidebar" id="sidebar" style="flex:1;overflow-y:auto;width:100%;border-right:none;"></div>
     <div style="padding:10px 12px;border-top:0.5px solid var(--border);flex-shrink:0;">
       <button class="btn" style="width:100%;font-size:12px;" onclick="addCategory()">+ 카테고리 추가</button>
@@ -1763,12 +1815,16 @@ function renderSidebar() {
     const items  = ITEMS.filter(i => i.cat === cat.id);
     const closed = collapsedCats[cat.id];
     html += `<div class="cat-header ${closed?'closed':''}"
+      data-catid="${cat.id}"
       ondragover="onCatDragOver(event,'${cat.id}')"
       ondragleave="onCatDragLeave(event)"
       ondrop="onCatDrop(event,'${cat.id}')">
       <span class="drag-handle"
         draggable="true"
-        ondragstart="onCatDragStart(event,'${cat.id}')">⠿</span>
+        ondragstart="onCatDragStart(event,'${cat.id}')"
+        ontouchstart="onTouchDragStart(event,'${cat.id}')"
+        ontouchmove="onTouchDragMove(event)"
+        ontouchend="onTouchDragEnd(event)">⠿</span>
       <span class="cat-toggle" onclick="toggleCat('${cat.id}')" style="flex:1;display:flex;align-items:center;gap:4px;min-width:0;">
         <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${cat.label}</span>
         <span class="cat-arrow">▾</span>
@@ -1837,6 +1893,8 @@ function toggleCat(id) { collapsedCats[id] = !collapsedCats[id]; renderSidebar()
 
 // 카테고리 드래그 순서 변경
 let dragCatId = null;
+
+// ── PC 드래그 ──
 function onCatDragStart(e, catId) {
   dragCatId = catId;
   e.dataTransfer.effectAllowed = 'move';
@@ -1857,6 +1915,76 @@ function onCatDrop(e, targetId) {
   CATEGORIES.splice(toIdx, 0, moved);
   dragCatId = null;
   saveState(); renderSidebar(); renderTableView();
+}
+
+// ── 모바일 터치 드래그 ──
+let touchDragCatId = null;
+let touchDragEl    = null;
+let touchClone     = null;
+
+function onTouchDragStart(e, catId) {
+  e.stopPropagation();
+  touchDragCatId = catId;
+  touchDragEl = e.currentTarget.closest('.cat-header');
+
+  // 반투명 clone 생성
+  touchClone = touchDragEl.cloneNode(true);
+  touchClone.style.cssText = `
+    position: fixed; z-index: 9999; opacity: 0.85;
+    pointer-events: none; width: ${touchDragEl.offsetWidth}px;
+    background: var(--surface2); border: 1px solid var(--blue);
+    border-radius: 6px; left: 0; top: 0;
+  `;
+  document.body.appendChild(touchClone);
+  touchDragEl.style.opacity = '0.3';
+}
+
+function onTouchDragMove(e) {
+  if (!touchClone) return;
+  e.preventDefault();
+  const t = e.touches[0];
+  touchClone.style.left = (t.clientX - 20) + 'px';
+  touchClone.style.top  = (t.clientY - 20) + 'px';
+
+  // 현재 위치의 cat-header 찾기
+  touchClone.style.display = 'none';
+  const el = document.elementFromPoint(t.clientX, t.clientY);
+  touchClone.style.display = '';
+  const overHeader = el?.closest('.cat-header');
+  document.querySelectorAll('.cat-header').forEach(h => h.classList.remove('drag-over'));
+  if (overHeader && overHeader !== touchDragEl) overHeader.classList.add('drag-over');
+}
+
+function onTouchDragEnd(e) {
+  if (!touchClone) return;
+  const t = e.changedTouches[0];
+
+  // 놓은 위치의 cat-header 찾기
+  touchClone.style.display = 'none';
+  const el = document.elementFromPoint(t.clientX, t.clientY);
+  const overHeader = el?.closest('.cat-header');
+  document.querySelectorAll('.cat-header').forEach(h => h.classList.remove('drag-over'));
+
+  // 순서 변경
+  if (overHeader && overHeader !== touchDragEl) {
+    const targetId = overHeader.dataset.catid;
+    if (targetId && touchDragCatId) {
+      const fromIdx = CATEGORIES.findIndex(c => c.id === touchDragCatId);
+      const toIdx   = CATEGORIES.findIndex(c => c.id === targetId);
+      if (fromIdx >= 0 && toIdx >= 0) {
+        const [moved] = CATEGORIES.splice(fromIdx, 1);
+        CATEGORIES.splice(toIdx, 0, moved);
+        saveState(); renderSidebar(); renderTableView();
+      }
+    }
+  }
+
+  // 정리
+  touchClone.remove();
+  touchClone = null;
+  if (touchDragEl) touchDragEl.style.opacity = '';
+  touchDragEl    = null;
+  touchDragCatId = null;
 }
 
 function selectItem(id) {
@@ -2302,6 +2430,31 @@ async function driveLoad() {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 10. 초기화
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 테마 초기화 (저장된 설정 또는 시스템 설정)
+function initTheme() {
+  const saved = localStorage.getItem('theme');
+  if (saved) {
+    document.documentElement.setAttribute('data-theme', saved);
+    document.getElementById('themeBtn').textContent = saved === 'dark' ? '☀️' : '🌙';
+  } else {
+    // 시스템 다크모드 감지
+    const sysDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (sysDark) {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.getElementById('themeBtn').textContent = '☀️';
+    }
+  }
+}
+
+function toggleTheme() {
+  const cur = document.documentElement.getAttribute('data-theme');
+  const next = cur === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  document.getElementById('themeBtn').textContent = next === 'dark' ? '☀️' : '🌙';
+}
+
+initTheme();
 loadState();
 renderChips();
 renderSidebar();
