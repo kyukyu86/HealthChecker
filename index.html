@@ -628,7 +628,7 @@ body {
     <button class="btn" onclick="driveSave()" id="saveBtn" title="Drive에 데이터 저장">↑ 저장</button>
     <button class="btn btn-primary" onclick="openFilePicker()" id="addYearBtn" style="white-space:nowrap">+ 파일 추가</button>
     <div id="authArea" style="flex-shrink:0">
-      <button class="btn-google" id="loginFallbackBtn" onclick="signIn()" style="font-size:12px;padding:6px 10px;">Google 로그인</button>
+      <button class="btn-google" id="loginFallbackBtn" onclick="if(!tokenClient){initGapi();initGsi();}setTimeout(signIn,500);" style="font-size:12px;padding:6px 10px;">Google 로그인</button>
     </div>
   </div>
 </div>
@@ -953,7 +953,23 @@ function renderAuthArea() {
 }
 
 function signIn() {
-  tokenClient.requestAccessToken({ prompt: 'consent' });
+  // tokenClient 아직 준비 안 됐으면 초기화 후 재시도
+  if (!tokenClient) {
+    showToast('Google 초기화 중... 잠시 후 다시 눌러주세요');
+    initGsi();
+    return;
+  }
+  if (!gsiReady) {
+    showToast('Google 초기화 중... 잠시 후 다시 눌러주세요');
+    setTimeout(signIn, 1000);
+    return;
+  }
+  try {
+    tokenClient.requestAccessToken({ prompt: '' });
+  } catch(e) {
+    console.error('signIn 실패:', e);
+    showToast('로그인 실패: ' + (e.message || '팝업이 차단됐을 수 있어요'));
+  }
 }
 
 function signOut() {
