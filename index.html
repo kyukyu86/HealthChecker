@@ -605,7 +605,7 @@ body {
      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
 <script>
   // ★ 여기에 Google Cloud Console에서 발급받은 클라이언트 ID를 붙여넣으세요
-  const CLIENT_ID = '221161654818-0f2jtiajr8qpftngs59pldha2ajn7ih6.apps.googleusercontent.com';
+  const CLIENT_ID = 'YOUR_CLIENT_ID_HERE.apps.googleusercontent.com';
 
   // ★ Google Drive 폴더 구조: 건강검진 > 추출용 > 2024.pdf
   const DRIVE_ROOT_FOLDER = '건강검진';   // 최상위 폴더
@@ -618,11 +618,6 @@ body {
   const VISION_API_KEY = 'YOUR_VISION_API_KEY_HERE';
 </script>
 <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-
-<!-- 디버그 오버레이 (문제 확인 후 제거) -->
-<div id="debugLog" style="display:none;position:fixed;bottom:0;left:0;right:0;
-  background:rgba(0,0,0,0.85);color:#0f0;font-size:11px;padding:8px;
-  max-height:180px;overflow-y:auto;z-index:99999;font-family:monospace;"></div>
 
 <!-- Toolbar -->
 <div class="toolbar">
@@ -884,22 +879,10 @@ let pendingNewItems  = [];
 let pendingYearName  = null;
 let pendingYearData  = {};
 
-// ── 디버그 로그 ──
-function dbg(msg) {
-  console.log('[DBG]', msg);
-  const el = document.getElementById('debugLog');
-  if (el) {
-    el.style.display = 'block';
-    el.innerHTML += '<div>' + new Date().toLocaleTimeString() + ' ' + msg + '</div>';
-    el.scrollTop = el.scrollHeight;
-  }
-}
-
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 2. Google API 초기화
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function initGapi() {
-  dbg('initGapi 호출됨, gapi=' + (typeof gapi));
   if (typeof gapi === 'undefined') { setTimeout(initGapi, 500); return; }
   gapi.load('client', async () => {
     try {
@@ -907,18 +890,15 @@ function initGapi() {
         discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
       });
       gapiReady = true;
-      dbg('GAPI 준비완료');
-      checkReady();
+          checkReady();
     } catch(e) {
-      dbg('GAPI 실패: ' + e.message);
-      console.error('GAPI init 실패:', e);
+          console.error('GAPI init 실패:', e);
     }
   });
 }
 
 function initGsi() {
-  dbg('initGsi 호출됨, google=' + (typeof google));
-  if (typeof google === 'undefined' || !google.accounts) { dbg('GSI 미로드, 재시도'); setTimeout(initGsi, 500); return; }
+  if (typeof google === 'undefined' || !google.accounts) { setTimeout(initGsi, 500); return; }
   if (CLIENT_ID === 'YOUR_CLIENT_ID_HERE.apps.googleusercontent.com') {
     document.getElementById('setupBanner').style.display = 'flex';
     document.getElementById('authArea').innerHTML =
@@ -932,8 +912,7 @@ function initGsi() {
       callback: onTokenReceived,
     });
     gsiReady = true;
-    dbg('GSI 준비완료');
-    checkReady();
+      checkReady();
   } catch(e) {
     console.error('GSI init 실패:', e);
     // 로그인 버튼 직접 표시
@@ -974,7 +953,6 @@ function renderAuthArea() {
 }
 
 function signIn() {
-  dbg('signIn 호출, tokenClient=' + !!tokenClient + ', gsiReady=' + gsiReady);
   // tokenClient 아직 준비 안 됐으면 초기화 후 재시도
   if (!tokenClient) {
     showToast('Google 초기화 중... 잠시 후 다시 눌러주세요');
@@ -987,8 +965,7 @@ function signIn() {
     return;
   }
   try {
-    dbg('requestAccessToken 호출');
-    tokenClient.requestAccessToken({ prompt: '' });
+      tokenClient.requestAccessToken({ prompt: '' });
   } catch(e) {
     console.error('signIn 실패:', e);
     showToast('로그인 실패: ' + (e.message || '팝업이 차단됐을 수 있어요'));
