@@ -79,43 +79,45 @@ body {
 /* ── Toolbar ── */
 .toolbar {
   display: flex; align-items: center; gap: 8px;
-  padding: 0 16px; height: 52px;
+  padding: 0 12px; height: 52px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
+  flex-shrink: 0; flex-wrap: nowrap;
 }
-.toolbar-logo { font-size: 14px; font-weight: 600; letter-spacing: -0.3px; margin-right: 4px; }
+.toolbar-logo { font-size: 14px; font-weight: 600; letter-spacing: -0.3px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.toolbar-actions { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
 
 /* ── 터치 기기: hover 없으므로 버튼 항상 표시 ── */
 @media (hover: none) {
-  .cat-del-btn { opacity: 0.5 !important; }
-  .cat-del-btn:active { background: var(--red-bg); color: var(--red); opacity: 1 !important; }
-  .item-del { opacity: 0.4 !important; }
-  .item-del:active { background: var(--red-bg); color: var(--red); opacity: 1 !important; }
+  .cat-del-btn {
+    opacity: 1 !important;
+    width: 20px; height: 20px; font-size: 11px;
+  }
+  .cat-del-btn:active { background: var(--red-bg); color: var(--red); }
+  .item-del {
+    opacity: 1 !important;
+    font-size: 10px; padding: 2px 5px;
+  }
+  .item-del:active { background: var(--red-bg); color: var(--red); }
   .row-actions { opacity: 1 !important; }
-  .ic { opacity: 0.5; }
+  .ic { opacity: 0.7 !important; }
   .ic:active { opacity: 1; background: var(--surface2); }
   .ic-del:active { background: var(--red-bg); color: var(--red); }
-  .chip-del { opacity: 0.6 !important; }
-  .drag-handle { color: var(--text3) !important; }
+  .chip-del { opacity: 0.8 !important; }
+  .drag-handle { color: var(--text3) !important; opacity: 1 !important; }
   .btn-add-item { opacity: 1 !important; }
+  /* 터치 영역 확대 */
+  .cat-del-btn, .item-del, .ic { min-width: 28px; min-height: 28px; }
 }
 
 /* ── 모바일 반응형 ── */
 @media (max-width: 768px) {
-  /* 툴바: 2줄로 */
-  .toolbar {
-    padding: 0 12px; height: auto;
-    flex-wrap: wrap; gap: 0;
-    padding: 8px 12px;
-  }
-  .toolbar-logo { font-size: 13px; flex: 1; }
-  .toolbar-actions {
-    display: flex; align-items: center;
-    gap: 6px; flex-wrap: nowrap;
-  }
-  #loadBtn, #saveBtn { font-size: 11px; padding: 4px 8px; }
-  #addYearBtn { font-size: 11px; padding: 4px 8px; }
+  /* 툴바 */
+  .toolbar { padding: 0 10px; height: 48px; gap: 6px; }
+  .toolbar-logo { font-size: 13px; }
+  .toolbar-actions { gap: 4px; }
+  #loadBtn, #saveBtn, #themeBtn { font-size: 13px; padding: 5px 7px; }
+  #addYearBtn { font-size: 12px; padding: 5px 9px; }
 
   /* 바디: 세로 분할 */
   .body { flex-direction: column; }
