@@ -1,10 +1,10 @@
 const CACHE_NAME = 'health-checkup-v1';
 const ASSETS = [
-  '/health-checkup/',
-  '/health-checkup/index.html',
-  '/health-checkup/manifest.json',
-  '/health-checkup/icons/icon-192.png',
-  '/health-checkup/icons/icon-512.png',
+  '/HealthChecker/',
+  '/HealthChecker/index.html',
+  '/HealthChecker/manifest.json',
+  '/HealthChecker/icons/icon-192.png',
+  '/HealthChecker/icons/icon-512.png',
 ];
 
 // 설치: 핵심 파일 캐싱
