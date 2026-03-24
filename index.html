@@ -1,0 +1,2325 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>건강검진 트래커</title>
+<meta name="description" content="연도별 건강검진 결과 관리">
+<meta name="theme-color" content="#ffffff">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="건강검진">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+
+<!-- Google API -->
+<script src="https://apis.google.com/js/api.js"></script>
+<script src="https://accounts.google.com/gsi/client"></script>
+<!-- Chart.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+
+<style>
+/* ── 설정: 여기에 클라이언트 ID를 입력하세요 ── */
+/* CLIENT_ID는 아래 <script> 상단에 있습니다   */
+
+:root {
+  --bg:       #f5f5f3;
+  --surface:  #ffffff;
+  --surface2: #f0efed;
+  --border:   rgba(0,0,0,0.08);
+  --border2:  rgba(0,0,0,0.14);
+  --text:     #1a1a18;
+  --text2:    #6b6a64;
+  --text3:    #9e9d97;
+  --blue:     #1a6fd4;
+  --blue-bg:  #e8f0fb;
+  --green:    #1a8a5a;
+  --green-bg: #e4f4ec;
+  --amber:    #a06010;
+  --amber-bg: #fdf0d8;
+  --red:      #c43030;
+  --red-bg:   #fde8e8;
+  --radius:   10px;
+  --radius-lg:14px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:       #1c1c1a;
+    --surface:  #252522;
+    --surface2: #2e2e2b;
+    --border:   rgba(255,255,255,0.08);
+    --border2:  rgba(255,255,255,0.14);
+    --text:     #e8e7e0;
+    --text2:    #9e9d97;
+    --text3:    #6b6a64;
+    --blue:     #5b9fe8;
+    --blue-bg:  #1a2d4a;
+    --green:    #4ab87a;
+    --green-bg: #122b1e;
+    --amber:    #e8a840;
+    --amber-bg: #2e2010;
+    --red:      #e86060;
+    --red-bg:   #2e1010;
+  }
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, 'Helvetica Neue', sans-serif;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--bg);
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Toolbar ── */
+.toolbar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 16px; height: 52px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.toolbar-logo { font-size: 14px; font-weight: 600; letter-spacing: -0.3px; margin-right: 4px; }
+.year-chips { display: flex; gap: 5px; align-items: center; flex-wrap: nowrap; overflow-x: auto; }
+.year-chips::-webkit-scrollbar { display: none; }
+.detail-chips { display: flex; gap: 5px; align-items: center; flex-wrap: nowrap; overflow-x: auto; }
+.detail-chips::-webkit-scrollbar { display: none; }
+.chip {
+  padding: 3px 10px; border-radius: 20px;
+  border: 1px solid var(--border2); font-size: 11px;
+  cursor: pointer; user-select: none; white-space: nowrap;
+  background: var(--surface); color: var(--text2);
+  transition: all 0.15s;
+}
+.chip:hover { border-color: var(--blue); color: var(--blue); }
+.chip.on { background: var(--text); color: var(--surface); border-color: transparent; }
+.chip-inner { display: flex; align-items: center; gap: 5px; }
+.chip-del {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 13px; height: 13px; border-radius: 50%;
+  font-size: 10px; line-height: 1;
+  opacity: 0.5; transition: opacity 0.15s, background 0.15s;
+  flex-shrink: 0;
+}
+.chip:hover .chip-del { opacity: 1; }
+.chip.on .chip-del { color: var(--surface); }
+.chip.on .chip-del:hover { background: rgba(255,255,255,0.25); opacity: 1; }
+.chip:not(.on) .chip-del:hover { background: rgba(0,0,0,0.08); opacity: 1; }
+.chip-all {
+  padding: 3px 10px; border-radius: 20px;
+  border: 1px solid var(--border2); font-size: 11px;
+  cursor: pointer; user-select: none; white-space: nowrap;
+  color: var(--text2); background: var(--surface);
+  transition: all 0.15s;
+}
+.chip-all:hover { background: var(--surface2); }
+.chip-divider { width: 1px; height: 14px; background: var(--border2); flex-shrink: 0; }
+.ml-auto { margin-left: auto; }
+.toolbar-actions { display: flex; gap: 6px; align-items: center; }
+
+.btn {
+  padding: 6px 12px; border-radius: var(--radius);
+  border: 1px solid var(--border2);
+  background: var(--surface); color: var(--text);
+  font-size: 12px; font-family: inherit;
+  cursor: pointer; white-space: nowrap;
+  transition: background 0.15s;
+}
+.btn:hover { background: var(--surface2); }
+.btn-primary {
+  background: var(--text); color: var(--surface);
+  border-color: transparent;
+}
+.btn-primary:hover { opacity: 0.85; }
+.btn-google {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: var(--radius);
+  border: 1px solid var(--border2);
+  background: var(--surface); color: var(--text);
+  font-size: 12px; cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-google:hover { background: var(--surface2); }
+.btn-google svg { width: 14px; height: 14px; }
+.google-avatar {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--blue-bg); color: var(--blue);
+  font-size: 11px; font-weight: 600;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; flex-shrink: 0;
+}
+
+/* ── Body ── */
+.body { display: flex; flex: 1; overflow: hidden; }
+
+/* ── Sidebar ── */
+.sidebar {
+  width: 253px; flex-shrink: 0;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+}
+.sidebar::-webkit-scrollbar { width: 4px; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+.cat-header {
+  display: flex; align-items: center;
+  padding: 9px 12px; font-size: 13px; font-weight: 500;
+  color: var(--text); background: var(--surface2);
+  border-top: 0.5px solid var(--border);
+  cursor: pointer; user-select: none;
+}
+.cat-header:first-child { border-top: none; }
+.cat-arrow { font-size: 9px; transition: transform 0.2s; margin-left: 4px; color: var(--text3); }
+.cat-header.closed .cat-arrow { transform: rotate(-90deg); }
+.cat-del {
+  margin-left: auto; width: 16px; height: 16px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; opacity: 0; transition: opacity 0.15s, background 0.15s;
+  color: var(--text3); flex-shrink: 0;
+}
+.cat-header:hover .cat-del { opacity: 1; }
+.cat-del:hover { background: var(--red-bg); color: var(--red); opacity: 1 !important; }
+.cat-del-btn {
+  flex-shrink: 0; width: 16px; height: 16px; border-radius: 50%;
+  border: none; background: transparent; cursor: pointer;
+  font-size: 10px; color: var(--text3);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity 0.15s, background 0.15s;
+  padding: 0;
+}
+.cat-header:hover .cat-del-btn { opacity: 1; }
+.cat-del-btn:hover { background: var(--red-bg); color: var(--red); }
+.item-btn {
+  display: flex; align-items: center;
+  padding: 6px 10px 6px 18px;
+  cursor: pointer; border-left: 2px solid transparent;
+  transition: background 0.1s; gap: 8px;
+}
+.drag-handle {
+  cursor: grab; color: var(--border2); font-size: 13px;
+  padding: 0 4px; flex-shrink: 0;
+  transition: color 0.15s;
+}
+.cat-header:hover .drag-handle { color: var(--text3); }
+.cat-header.drag-over { background: var(--blue-bg); border-color: var(--blue); }
+.item-btn.drag-over { background: var(--blue-bg); }
+.item-btn:hover { background: var(--surface2); }
+.item-btn.active { background: var(--blue-bg); border-left-color: var(--blue); }
+.item-label { flex: 1; font-size: 12px; line-height: 1.3; }
+.item-del {
+  width: 14px; height: 14px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; opacity: 0; transition: opacity 0.15s, background 0.15s;
+  color: var(--text3); flex-shrink: 0;
+}
+.item-btn:hover .item-del { opacity: 1; }
+.item-del:hover { background: var(--red-bg); color: var(--red); opacity: 1 !important; }
+.status-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.dot-normal  { background: var(--green); }
+.dot-warning { background: var(--amber); }
+.dot-danger  { background: var(--red); }
+.dot-none    { background: var(--border2); }
+
+/* ── Detail Panel ── */
+.detail { flex: 1; overflow-y: auto; background: var(--bg); }
+.detail::-webkit-scrollbar { width: 4px; }
+.detail::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+.empty-state {
+  height: 100%; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 10px; color: var(--text3);
+}
+.empty-icon { font-size: 40px; opacity: 0.35; }
+
+/* 우측 상단 컨트롤바 */
+.detail-topbar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 20px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0; flex-wrap: wrap;
+}
+.detail-chips { display: flex; gap: 5px; align-items: center; flex-wrap: nowrap; overflow-x: auto; }
+.detail-chips::-webkit-scrollbar { display: none; }
+.search-wrap { display: flex; gap: 6px; align-items: center; margin-left: auto; }
+.search-input {
+  padding: 5px 10px; border-radius: var(--radius);
+  border: 1px solid var(--border2); font-size: 12px;
+  font-family: inherit; background: var(--surface); color: var(--text);
+  width: 160px;
+}
+.search-input:focus { outline: none; border-color: var(--blue); }
+
+/* 전체 항목 테이블 뷰 */
+.table-view { padding: 20px 24px; }
+
+/* 수동 항목 뱃지 */
+.tag-m { font-size: 9px; padding: 1px 5px; border-radius: 8px;
+  background: var(--amber-bg); color: var(--amber); margin-left: 5px; vertical-align: middle; }
+
+/* 행 액션 아이콘 */
+.row-actions { display: inline-flex; gap: 2px; margin-left: 4px; opacity: 0; transition: opacity 0.1s; }
+.tv-table tbody tr:hover .row-actions { opacity: 1; }
+.ic { font-size: 10px; padding: 2px 5px; border-radius: 4px; cursor: pointer;
+  color: var(--text3); border: none; background: none; }
+.ic:hover { background: var(--surface2); color: var(--text); }
+.ic-del:hover { background: var(--red-bg); color: var(--red); }
+
+/* 카테고리 + 항목 추가 버튼 */
+.btn-add-item {
+  display: flex; align-items: center; gap: 4px;
+  padding: 3px 9px; border-radius: 6px;
+  border: 0.5px solid var(--border2);
+  background: transparent; font-size: 11px;
+  color: var(--text2); cursor: pointer; transition: all 0.15s;
+}
+.btn-add-item:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-bg); }
+
+/* 인라인 입력행 */
+.new-row td { padding: 5px 8px; background: var(--surface2); border-top: 0.5px solid var(--border2); }
+.new-row:last-child td { border-bottom: none; }
+.new-row td.ni-year { text-align: right; }
+.ni {
+  width: 100%; padding: 4px 7px;
+  border: 0.5px solid transparent; border-radius: 5px;
+  font-size: 11px; font-family: inherit;
+  background: transparent; color: var(--text);
+  transition: border-color 0.15s, background 0.15s;
+}
+.ni[type="number"] { text-align: right; }
+.ni::placeholder { color: var(--text3); font-size: 10px; }
+.ni:focus { outline: none; border-color: var(--border2); background: var(--surface); }
+.ni:hover:not(:focus) { border-color: var(--border); }
+.ref-wrap { display: flex; align-items: center; gap: 3px; }
+.ref-wrap .ni { width: 40px; }
+.ref-wrap .ni.unit { width: 36px; }
+.ref-sep { font-size: 10px; color: var(--text3); flex-shrink: 0; }
+.new-row-btns { display: flex; gap: 4px; align-items: center; justify-content: center; }
+.btn-nr-ok {
+  width: 24px; height: 24px; border-radius: 50%;
+  border: none; background: var(--text); color: var(--surface);
+  font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  line-height: 1;
+}
+.btn-nr-ok:hover { opacity: 0.8; }
+.btn-nr-cl {
+  width: 24px; height: 24px; border-radius: 50%;
+  border: 0.5px solid var(--border2); background: transparent;
+  font-size: 13px; cursor: pointer; color: var(--text3);
+  display: flex; align-items: center; justify-content: center;
+  line-height: 1;
+}
+.btn-nr-cl:hover { background: var(--red-bg); color: var(--red); border-color: var(--red); }
+.tv-cat { margin-bottom: 20px; padding-top: 4px; }
+.tv-cat-card { background: var(--surface); }
+.tv-cat-header {
+  display: flex; align-items: center; gap: 0;
+  padding: 0 0 10px;
+}
+.tv-cat-header-bar {
+  width: 3px; height: 22px; border-radius: 0;
+  background: var(--text); flex-shrink: 0;
+}
+.tv-cat-header-text {
+  font-size: 14px; font-weight: 500; color: var(--text);
+  padding-left: 10px; flex: 1;
+}
+
+.tv-cat-card {
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.tv-table {
+  width: 100%; border-collapse: collapse; table-layout: fixed;
+  background: var(--surface);
+}
+.tv-table-wrap {
+  width: 100%; border-collapse: collapse; table-layout: auto;
+  background: transparent; display: table;
+}
+.tv-table-wrap .tv-table { width: auto; }
+.tv-table th {
+  padding: 7px 14px; font-size: 11px; font-weight: 500;
+  color: var(--text3); background: var(--surface2);
+  border-bottom: 1px solid var(--border); text-align: left;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.tv-table td {
+  padding: 8px 14px; font-size: 12px; border-bottom: 1px solid var(--border);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.tv-table tr:last-child td { border-bottom: none; }
+.tv-table thead tr { cursor: default; }
+.tv-table tbody tr { cursor: pointer; transition: background 0.1s; }
+.tv-table tbody tr:hover { background: var(--blue-bg); }
+.tv-table tbody tr:hover td { color: var(--text); }
+.tv-val-normal { color: var(--text); }
+.tv-val-warning { color: var(--amber); font-weight: 500; }
+.tv-val-danger  { color: var(--red);  font-weight: 500; }
+.tv-delta-up   { color: var(--red);   font-size: 10px; }
+.tv-delta-down { color: var(--green); font-size: 10px; }
+
+/* 상세 뷰 뒤로가기 */
+.back-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 5px 10px; margin: 16px 20px 0;
+  border: 1px solid var(--border2); border-radius: var(--radius);
+  background: var(--surface); color: var(--text2);
+  font-size: 12px; cursor: pointer; transition: background 0.1s;
+}
+.back-btn:hover { background: var(--surface2); color: var(--text); }
+
+.detail-inner { padding: 24px 28px; display: flex; flex-direction: column; gap: 16px; }
+.detail-title { font-size: 18px; font-weight: 600; letter-spacing: -0.3px; }
+.ref-badge {
+  display: inline-block; margin-top: 5px;
+  padding: 3px 10px; border-radius: 20px;
+  background: var(--surface2); border: 1px solid var(--border);
+  font-size: 11px; color: var(--text2);
+}
+
+/* ── List Card ── */
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); overflow: hidden;
+}
+.card-title {
+  font-size: 11px; font-weight: 600; color: var(--text2);
+  padding: 12px 16px 8px;
+  border-bottom: 1px solid var(--border);
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+.list-table { width: 100%; border-collapse: collapse; }
+.list-table th {
+  padding: 8px 16px; font-size: 11px; font-weight: 500;
+  color: var(--text3); text-align: left;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+}
+.list-table th.r { text-align: right; }
+.list-table td { padding: 11px 16px; font-size: 13px; border-bottom: 1px solid var(--border); }
+.list-table tr:last-child td { border-bottom: none; }
+.list-table td.r { text-align: right; }
+.tag {
+  display: inline-block; padding: 2px 8px;
+  border-radius: 20px; font-size: 10px; font-weight: 500;
+}
+.tag-normal  { background: var(--green-bg); color: var(--green); }
+.tag-warning { background: var(--amber-bg); color: var(--amber); }
+.tag-danger  { background: var(--red-bg);   color: var(--red); }
+.tag-none    { background: var(--surface2); color: var(--text3); }
+.d-up   { color: var(--red); }
+.d-down { color: var(--green); }
+.d-same { color: var(--text3); }
+
+/* ── Chart Card ── */
+.chart-wrap { padding: 16px; height: 220px; position: relative; }
+
+/* ── Loading Overlay ── */
+.loading-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(0,0,0,0.4);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 14px;
+}
+.loading-spinner {
+  width: 36px; height: 36px;
+  border: 3px solid rgba(255,255,255,0.2);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { color: white; font-size: 13px; }
+
+/* ── Toast ── */
+.toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  background: var(--text); color: var(--surface);
+  padding: 10px 20px; border-radius: var(--radius);
+  font-size: 13px; z-index: 300;
+  opacity: 0; transition: opacity 0.2s;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; }
+
+/* ── Modal ── */
+.modal-bg {
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(0,0,0,0.4);
+  display: flex; align-items: center; justify-content: center;
+}
+.modal {
+  background: var(--surface); border-radius: var(--radius-lg);
+  padding: 22px; width: 340px;
+  border: 1px solid var(--border2);
+}
+.modal h2 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+.modal p  { font-size: 12px; color: var(--text2); margin-bottom: 14px; line-height: 1.6; }
+.modal input {
+  width: 100%; padding: 9px 12px;
+  border: 1px solid var(--border2); border-radius: var(--radius);
+  font-size: 13px; font-family: inherit;
+  background: var(--surface); color: var(--text);
+}
+.modal input:focus { outline: none; border-color: var(--blue); }
+.modal-btns { display: flex; gap: 8px; margin-top: 14px; justify-content: flex-end; }
+
+/* ── New Items Popup ── */
+.new-items-modal {
+  background: var(--surface); border-radius: var(--radius-lg);
+  padding: 22px; width: 480px; max-height: 80vh;
+  overflow-y: auto; border: 1px solid var(--border2);
+}
+.new-items-modal h2 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+.new-items-modal p  { font-size: 12px; color: var(--text2); margin-bottom: 16px; line-height: 1.6; }
+.new-item-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 4px; border-bottom: 0.5px solid var(--border);
+}
+.new-item-row:last-of-type { border-bottom: none; }
+.new-item-row.excluded { opacity: 0.4; }
+.new-item-check { width: 15px; height: 15px; cursor: pointer; flex-shrink: 0; accent-color: var(--blue); }
+.new-item-name { font-size: 13px; font-weight: 500; flex: 1; }
+.new-item-val  { font-size: 12px; color: var(--text2); min-width: 60px; text-align: right; }
+.new-item-cat  {
+  padding: 4px 8px; border-radius: var(--radius);
+  border: 0.5px solid var(--border2); font-size: 11px;
+  font-family: inherit; background: var(--surface); color: var(--text2);
+  width: 130px;
+}
+
+/* ── Setup Banner ── */
+.setup-banner {
+  margin: 12px 16px 0;
+  padding: 10px 14px;
+  background: var(--amber-bg); border: 1px solid var(--amber);
+  border-radius: var(--radius); font-size: 12px; color: var(--amber);
+  display: flex; align-items: center; gap: 8px;
+}
+
+/* ── File Picker Modal ── */
+.file-picker {
+  background: var(--surface); border-radius: var(--radius-lg);
+  padding: 22px; width: 420px; max-height: 80vh;
+  display: flex; flex-direction: column; gap: 14px;
+  border: 1px solid var(--border2);
+}
+.file-picker h2 { font-size: 15px; font-weight: 600; }
+.file-picker-desc { font-size: 12px; color: var(--text2); line-height: 1.6; }
+.file-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; min-height: 60px; }
+.file-list::-webkit-scrollbar { width: 4px; }
+.file-list::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+.file-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: var(--radius);
+  border: 1px solid var(--border); cursor: pointer;
+  transition: all 0.15s; user-select: none;
+}
+.file-item:hover { border-color: var(--blue); background: var(--blue-bg); }
+.file-item.selected { border-color: var(--blue); background: var(--blue-bg); }
+.file-item.already { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
+.file-icon { font-size: 20px; flex-shrink: 0; }
+.file-info { flex: 1; }
+.file-name { font-size: 13px; font-weight: 500; }
+.file-year-badge {
+  display: inline-block; font-size: 10px; padding: 1px 6px;
+  border-radius: 10px; margin-top: 2px;
+  background: var(--surface2); color: var(--text3);
+}
+.file-year-badge.done { background: var(--green-bg); color: var(--green); }
+.file-check { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--border2); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; transition: all 0.15s; }
+.file-item.selected .file-check { background: var(--blue); border-color: var(--blue); color: white; }
+.file-list-empty { font-size: 12px; color: var(--text3); text-align: center; padding: 20px 0; }
+.file-list-loading { font-size: 12px; color: var(--text2); text-align: center; padding: 20px 0; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.mini-spinner { width: 14px; height: 14px; border: 2px solid var(--border2); border-top-color: var(--blue); border-radius: 50%; animation: spin 0.7s linear infinite; }
+</style>
+</head>
+<body>
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     설정 (Google Cloud Console에서 발급)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<script>
+  // ★ 여기에 Google Cloud Console에서 발급받은 클라이언트 ID를 붙여넣으세요
+  const CLIENT_ID = 'YOUR_CLIENT_ID_HERE.apps.googleusercontent.com';
+
+  // ★ Google Drive 폴더 구조: 건강검진 > 추출용 > 2024.pdf
+  const DRIVE_ROOT_FOLDER = '건강검진';   // 최상위 폴더
+  const DRIVE_SUB_FOLDER  = '추출용';     // 하위 폴더 (PDF 보관 위치)
+  const DRIVE_DATA_FILE   = 'checkup-data.json'; // 데이터 저장 파일명
+
+  // ★ Google Cloud Vision API Key
+  // Cloud Console → API 및 서비스 → 사용자 인증 정보 → API 키 만들기
+  // (Vision API가 활성화된 프로젝트에서 발급)
+  const VISION_API_KEY = 'YOUR_VISION_API_KEY_HERE';
+</script>
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+
+<!-- Toolbar -->
+<div class="toolbar">
+  <span class="toolbar-logo">🩺 건강검진 트래커</span>
+  <div class="ml-auto"></div>
+  <div class="toolbar-actions">
+    <div id="authArea"></div>
+    <button class="btn" onclick="driveLoad()" id="loadBtn" title="Drive에서 데이터 불러오기">↓ 불러오기</button>
+    <button class="btn" onclick="driveSave()" id="saveBtn" title="Drive에 데이터 저장">↑ 저장</button>
+    <button class="btn btn-primary" onclick="openFilePicker()" id="addYearBtn">+ 파일 추가</button>
+  </div>
+</div>
+
+<!-- Setup Banner (CLIENT_ID 미설정 시) -->
+<div class="setup-banner" id="setupBanner" style="display:none">
+  ⚠️ CLIENT_ID가 설정되지 않았습니다. 이 파일을 텍스트 편집기로 열고 상단 <strong>CLIENT_ID</strong>를 입력하세요.
+</div>
+
+<div class="body">
+  <div class="sidebar-wrap" style="width:253px;flex-shrink:0;display:flex;flex-direction:column;background:var(--surface);border-right:1px solid var(--border);">
+    <div class="sidebar" id="sidebar" style="flex:1;overflow-y:auto;width:100%;border-right:none;"></div>
+    <div style="padding:10px 12px;border-top:0.5px solid var(--border);flex-shrink:0;">
+      <button class="btn" style="width:100%;font-size:12px;" onclick="addCategory()">+ 카테고리 추가</button>
+    </div>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+    <div class="detail-topbar">
+      <div class="year-chips" id="yearChips"></div>
+      <div class="search-wrap">
+        <input type="text" class="search-input" id="searchInput" placeholder="항목 검색..." />
+        <button class="btn" onclick="doSearch()">검색</button>
+        <button class="btn" onclick="clearSearch()">초기화</button>
+      </div>
+    </div>
+    <div class="detail" id="detail">
+      <div class="empty-state">
+        <div class="empty-icon">📋</div>
+        <div style="font-size:13px;color:var(--text3)">좌측에서 검진 항목을 선택하세요</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Loading -->
+<div class="loading-overlay" id="loadingOverlay" style="display:none">
+  <div class="loading-spinner"></div>
+  <div class="loading-text" id="loadingText">처리 중...</div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- File Picker Modal -->
+<div class="modal-bg" id="filePickerModal" style="display:none">
+  <div class="file-picker">
+    <h2>파일 추가</h2>
+    <p class="file-picker-desc">
+      Drive <strong>건강검진 &gt; 추출용</strong> 폴더의 PDF 목록이에요.<br>
+      추가할 파일을 선택하세요. 이미 추가된 파일은 비활성화됩니다.
+    </p>
+    <div class="file-list" id="fileList">
+      <div class="file-list-loading">
+        <div class="mini-spinner"></div> Drive에서 파일 목록 불러오는 중...
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn" onclick="closeFilePicker()">취소</button>
+      <button class="btn btn-primary" id="filePickerConfirm" onclick="confirmFilePicker()" disabled>추가</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Items Review Modal -->
+<div class="modal-bg" id="newItemsModal" style="display:none">
+  <div class="new-items-modal">
+    <h2>신규 항목 검토</h2>
+    <p>기존 목록에 없는 항목이에요. <strong>체크된 항목만 추가</strong>됩니다. 의미없는 항목은 체크를 해제하세요.</p>
+    <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">
+      <button class="btn btn-sm" onclick="toggleAllNewItems(true)">전체 선택</button>
+      <button class="btn btn-sm" onclick="toggleAllNewItems(false)">전체 해제</button>
+      <span style="margin-left:auto;font-size:11px;color:var(--text2)" id="newItemsCount"></span>
+    </div>
+    <div id="newItemsList"></div>
+    <div class="modal-btns" style="margin-top:14px">
+      <button class="btn" onclick="closeNewItemsModal()">취소</button>
+      <button class="btn btn-primary" onclick="confirmNewItems()">선택 항목 추가</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 1. 데이터 정의
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const CATEGORIES = [
+  { id: 'body',      label: '신체 계측' },
+  { id: 'bp',        label: '혈압 / 맥박' },
+  { id: 'vision',    label: '시력 / 안압' },
+  { id: 'hearing',   label: '청력 검사' },
+  { id: 'blood',     label: '혈액 기본' },
+  { id: 'iron',      label: '철분 검사' },
+  { id: 'liver',     label: '간 기능' },
+  { id: 'hepatitis', label: '간염 검사' },
+  { id: 'kidney',    label: '신장 기능' },
+  { id: 'urine',     label: '요 검사' },
+  { id: 'glucose',   label: '혈당 / 당뇨' },
+  { id: 'lipid',     label: '지질 / 콜레스테롤' },
+  { id: 'thyroid',   label: '갑상선' },
+  { id: 'mineral',   label: '전해질 / 무기질' },
+  { id: 'metabolic', label: '대사증후군' },
+  { id: 'tumor',     label: '종양 표지자' },
+  { id: 'immune',    label: '면역 / 류마티스' },
+  { id: 'enzyme',    label: '효소 검사' },
+  { id: 'etc',       label: '기타' },
+];
+
+let ITEMS = [
+  // ── 신체 계측 ──
+  { id: 'height',  cat: 'body',      name: '신장',              unit: 'cm',       refMin: 0,    refMax: 999 },
+  { id: 'weight',  cat: 'body',      name: '체중',              unit: 'kg',       refMin: 0,    refMax: 999 },
+  { id: 'waist',   cat: 'body',      name: '허리둘레',          unit: 'cm',       refMin: 0,    refMax: 90  },
+  { id: 'obesity', cat: 'body',      name: '비만도',            unit: '%',        refMin: 90,   refMax: 110 },
+  { id: 'muscle',  cat: 'body',      name: '골격근량',          unit: 'kg',       refMin: 0,    refMax: 999 },
+  { id: 'bfatm',   cat: 'body',      name: '체지방량',          unit: 'kg',       refMin: 0,    refMax: 999 },
+  { id: 'bfat',    cat: 'body',      name: '체지방율',          unit: '%',        refMin: 0,    refMax: 25  },
+  { id: 'bmi',     cat: 'body',      name: 'BMI',               unit: 'kg/m²',    refMin: 18.5, refMax: 24.9 },
+
+  // ── 혈압 / 맥박 ──
+  { id: 'sbp',     cat: 'bp',        name: '수축기 혈압',       unit: 'mmHg',     refMin: 90,   refMax: 120 },
+  { id: 'dbp',     cat: 'bp',        name: '이완기 혈압',       unit: 'mmHg',     refMin: 60,   refMax: 80  },
+  { id: 'pulse',   cat: 'bp',        name: '맥박',              unit: 'rate/min', refMin: 60,   refMax: 100 },
+
+  // ── 시력 / 안압 ──
+  { id: 'iop_l',   cat: 'vision',    name: '안압 (좌)',          unit: 'mmHg',     refMin: 10,   refMax: 20  },
+  { id: 'iop_r',   cat: 'vision',    name: '안압 (우)',          unit: 'mmHg',     refMin: 10,   refMax: 20  },
+
+  // ── 청력 검사 ──
+  { id: 'hear_l',  cat: 'hearing',   name: '청력 (좌)',          unit: 'dB',       refMin: 0,    refMax: 25  },
+  { id: 'hear_r',  cat: 'hearing',   name: '청력 (우)',          unit: 'dB',       refMin: 0,    refMax: 25  },
+
+  // ── 혈액 기본 ──
+  { id: 'wbc',     cat: 'blood',     name: 'WBC (백혈구)',       unit: '×10³/uL',  refMin: 4.0,  refMax: 9.0  },
+  { id: 'rbc',     cat: 'blood',     name: 'RBC (적혈구)',       unit: '×10⁶/uL',  refMin: 3.8,  refMax: 5.3  },
+  { id: 'hb',      cat: 'blood',     name: 'Hb (혈색소)',        unit: 'g/dL',     refMin: 13.0, refMax: 16.5 },
+  { id: 'hct',     cat: 'blood',     name: 'HCT (적혈구용적)',   unit: '%',        refMin: 36,   refMax: 56   },
+  { id: 'plt',     cat: 'blood',     name: 'Platelet (혈소판)',  unit: '×10³/uL',  refMin: 120,  refMax: 380  },
+  { id: 'mpv',     cat: 'blood',     name: 'MPV (평균혈소판용적)', unit: 'fL',     refMin: 9.1,  refMax: 12.0 },
+  { id: 'pdw',     cat: 'blood',     name: 'PDW (혈소판분포계수)', unit: 'fL',     refMin: 9.8,  refMax: 15.2 },
+  { id: 'pct',     cat: 'blood',     name: 'PCT (혈소판용적)',   unit: '%',        refMin: 0.10, refMax: 1.00 },
+  { id: 'mcv',     cat: 'blood',     name: 'MCV (평균적혈구용적)', unit: 'fL',     refMin: 80,   refMax: 100  },
+  { id: 'mch',     cat: 'blood',     name: 'MCH (평균적혈구혈색소)', unit: 'pg',   refMin: 28,   refMax: 36   },
+  { id: 'mchc',    cat: 'blood',     name: 'MCHC (평균혈색소농도)', unit: 'g/dL',  refMin: 31,   refMax: 37   },
+  { id: 'rdw',     cat: 'blood',     name: 'RDW (적혈구분포계수)', unit: '%',      refMin: 10,   refMax: 16.5 },
+  { id: 'neut',    cat: 'blood',     name: 'Neutrophil (호중구)', unit: '%',       refMin: 42.2, refMax: 75.2 },
+  { id: 'lymp',    cat: 'blood',     name: 'Lymphocyte (림프구)', unit: '%',       refMin: 20.5, refMax: 51.1 },
+  { id: 'mono',    cat: 'blood',     name: 'Monocyte (단핵구)',  unit: '%',        refMin: 1.7,  refMax: 9.3  },
+  { id: 'eosi',    cat: 'blood',     name: 'Eosinophil (호산구)', unit: '%',       refMin: 0,    refMax: 6.0  },
+  { id: 'baso',    cat: 'blood',     name: 'Basophil (호염기구)', unit: '%',       refMin: 0,    refMax: 1.0  },
+
+  // ── 철분 검사 ──
+  { id: 'fe',      cat: 'iron',      name: 'Iron (혈청철)',      unit: 'μg/dL',    refMin: 65,   refMax: 157  },
+  { id: 'tibc',    cat: 'iron',      name: 'TIBC (철결합능)',    unit: 'μg/dL',    refMin: 260,  refMax: 420  },
+  { id: 'uibc',    cat: 'iron',      name: 'UIBC (불포화철결합능)', unit: 'μg/dL', refMin: 191,  refMax: 269  },
+
+  // ── 간 기능 ──
+  { id: 'tp',      cat: 'liver',     name: 'Total Protein (총단백)', unit: 'g/dL', refMin: 5.8,  refMax: 8.1  },
+  { id: 'alb',     cat: 'liver',     name: 'Albumin (알부민)',   unit: 'g/dL',     refMin: 3.1,  refMax: 5.2  },
+  { id: 'glob',    cat: 'liver',     name: 'Globulin (글로불린)', unit: 'g/dL',    refMin: 1.5,  refMax: 3.5  },
+  { id: 'ast',     cat: 'liver',     name: 'AST / GOT',          unit: 'U/L',      refMin: 0,    refMax: 40   },
+  { id: 'alt',     cat: 'liver',     name: 'ALT / GPT',          unit: 'U/L',      refMin: 0,    refMax: 35   },
+  { id: 'ggt',     cat: 'liver',     name: 'γ-GTP',              unit: 'U/L',      refMin: 11,   refMax: 63   },
+  { id: 'alp',     cat: 'liver',     name: 'ALP (알칼리포스파타제)', unit: 'U/L',  refMin: 104,  refMax: 338  },
+  { id: 'tbil',    cat: 'liver',     name: 'Total Bilirubin (총빌리루빈)', unit: 'mg/dL', refMin: 0.2, refMax: 1.2 },
+  { id: 'dbil',    cat: 'liver',     name: 'Direct Bilirubin (직접빌리루빈)', unit: 'mg/dL', refMin: 0.0, refMax: 0.4 },
+  { id: 'ibil',    cat: 'liver',     name: 'Indirect Bilirubin (간접빌리루빈)', unit: 'mg/dL', refMin: 0.2, refMax: 0.8 },
+  { id: 'ldh',     cat: 'liver',     name: 'LDH (유산탈수소효소)', unit: 'U/L',    refMin: 106,  refMax: 211  },
+
+  // ── 간염 검사 ──
+  { id: 'hbsag',   cat: 'hepatitis', name: 'HBs Ag (B형간염 항원)', unit: 'S/CO',  refMin: 0,    refMax: 1.0  },
+  { id: 'hbsab',   cat: 'hepatitis', name: 'HBs Ab (B형간염 항체)', unit: 'IU/L',  refMin: 10,   refMax: 999  },
+  { id: 'hcvab',   cat: 'hepatitis', name: 'HCV Ab (C형간염 항체)', unit: '',       refMin: 0,    refMax: 999  },
+  { id: 'havigg',  cat: 'hepatitis', name: 'HAV IgG (A형간염 항체)', unit: 'S/CO', refMin: 1.0,  refMax: 999  },
+
+  // ── 신장 기능 ──
+  { id: 'bun',     cat: 'kidney',    name: 'BUN (요소질소)',     unit: 'mg/dL',    refMin: 8,    refMax: 20   },
+  { id: 'cr',      cat: 'kidney',    name: 'Creatinine (크레아티닌)', unit: 'mg/dL', refMin: 0.7, refMax: 1.5 },
+  { id: 'gfr',     cat: 'kidney',    name: 'GFR (신사구체여과율)', unit: 'mL/min', refMin: 60,   refMax: 999  },
+  { id: 'ua',      cat: 'kidney',    name: 'Uric Acid (요산)',   unit: 'mg/dL',    refMin: 3.0,  refMax: 7.0  },
+  { id: 'cpk',     cat: 'kidney',    name: 'CPK (크레아틴인산효소)', unit: 'IU/L', refMin: 50,   refMax: 200  },
+
+  // ── 요 검사 ──
+  { id: 'sgrav',   cat: 'urine',     name: '요비중',             unit: '',         refMin: 1.005,refMax: 1.030 },
+  { id: 'uph',     cat: 'urine',     name: '요 pH',              unit: '',         refMin: 4.5,  refMax: 8.0  },
+
+  // ── 혈당 / 당뇨 ──
+  { id: 'fbg',     cat: 'glucose',   name: 'Glucose (공복혈당)', unit: 'mg/dL',    refMin: 70,   refMax: 99   },
+  { id: 'hba1',    cat: 'glucose',   name: 'HbA1c (당화혈색소)', unit: '%',        refMin: 0,    refMax: 5.6  },
+
+  // ── 지질 / 콜레스테롤 ──
+  { id: 'tc',      cat: 'lipid',     name: 'Total Cholesterol (총콜레스테롤)', unit: 'mg/dL', refMin: 0, refMax: 200 },
+  { id: 'tg',      cat: 'lipid',     name: 'Triglyceride (중성지방)', unit: 'mg/dL', refMin: 0,  refMax: 150  },
+  { id: 'hdl',     cat: 'lipid',     name: 'HDL Cholesterol (고밀도)',  unit: 'mg/dL', refMin: 40, refMax: 999 },
+  { id: 'ldl',     cat: 'lipid',     name: 'LDL Cholesterol (저밀도)',  unit: 'mg/dL', refMin: 0,  refMax: 130 },
+  { id: 'crf',     cat: 'lipid',     name: 'CRF (심장병 위험인자)', unit: '',        refMin: 1,    refMax: 5.5  },
+
+  // ── 갑상선 ──
+  { id: 'tsh',     cat: 'thyroid',   name: 'TSH (갑상선자극호르몬)', unit: 'uIU/mL', refMin: 0.35, refMax: 5.5 },
+  { id: 'ft4',     cat: 'thyroid',   name: 'Free T4 (유리싸이록신)', unit: 'ng/dL',  refMin: 0.89, refMax: 1.76 },
+
+  // ── 전해질 / 무기질 ──
+  { id: 'na',      cat: 'mineral',   name: 'Sodium (나트륨)',    unit: 'mmol/L',   refMin: 135,  refMax: 148  },
+  { id: 'k',       cat: 'mineral',   name: 'Potassium (칼륨)',   unit: 'mmol/L',   refMin: 3.5,  refMax: 5.3  },
+  { id: 'cl',      cat: 'mineral',   name: 'Chloride (염소)',    unit: 'mmol/L',   refMin: 98,   refMax: 107  },
+  { id: 'phos',    cat: 'mineral',   name: 'Phosphorus (인)',    unit: 'mg/dL',    refMin: 2.5,  refMax: 5.5  },
+  { id: 'ca',      cat: 'mineral',   name: 'Calcium (칼슘)',     unit: 'mg/dL',    refMin: 8.2,  refMax: 10.8 },
+
+  // ── 대사증후군 ──
+  { id: 'meta_wst', cat: 'metabolic', name: '허리둘레 (대사)',   unit: 'cm',       refMin: 0,    refMax: 90   },
+  { id: 'meta_hdl', cat: 'metabolic', name: 'HDL (대사)',        unit: 'mg/dL',    refMin: 40,   refMax: 999  },
+  { id: 'meta_tg',  cat: 'metabolic', name: '중성지방 (대사)',   unit: 'mg/dL',    refMin: 0,    refMax: 150  },
+  { id: 'meta_glc', cat: 'metabolic', name: '혈당 (대사)',       unit: 'mg/dL',    refMin: 70,   refMax: 99   },
+  { id: 'meta_sbp', cat: 'metabolic', name: '수축기혈압 (대사)', unit: 'mmHg',     refMin: 0,    refMax: 130  },
+  { id: 'meta_dbp', cat: 'metabolic', name: '이완기혈압 (대사)', unit: 'mmHg',     refMin: 0,    refMax: 85   },
+
+  // ── 종양 표지자 ──
+  { id: 'afp',     cat: 'tumor',     name: 'AFP (알파태아단백)', unit: 'ng/mL',    refMin: 0,    refMax: 7.0  },
+  { id: 'cea',     cat: 'tumor',     name: 'CEA (태아성암항원)', unit: 'ng/mL',    refMin: 0,    refMax: 4.3  },
+  { id: 'ca199',   cat: 'tumor',     name: 'CA19-9 (암항원19-9)', unit: 'U/mL',   refMin: 0,    refMax: 34   },
+  { id: 'psa',     cat: 'tumor',     name: 'PSA (전립선특이항원)', unit: 'ng/mL',  refMin: 0,    refMax: 4.0  },
+
+  // ── 면역 / 류마티스 ──
+  { id: 'ra',      cat: 'immune',    name: 'RA Factor (류마티스인자)', unit: 'U/mL', refMin: 0,  refMax: 18   },
+
+  // ── 효소 검사 ──
+  { id: 'amylase', cat: 'enzyme',    name: 'Amylase (아밀라아제)', unit: 'U/L',    refMin: 54,   refMax: 168  },
+];
+
+// 연도별 데이터 저장소
+let years = [];
+let data  = {};  // { '2024': { hb: 14.2, ... }, ... }
+
+// UI 상태
+let selectedYears = [];
+let activeId      = null;
+let collapsedCats = {};
+let chartInst     = null;
+
+// Google 상태
+let gapiReady   = false;
+let gsiReady    = false;
+let tokenClient = null;
+let accessToken = null;
+let userInfo    = null;
+
+// OCR 대기 중인 신규 항목 처리
+let pendingNewItems  = [];
+let pendingYearName  = null;
+let pendingYearData  = {};
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 2. Google API 초기화
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function initGapi() {
+  gapi.load('client', async () => {
+    await gapi.client.init({
+      discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
+    });
+    gapiReady = true;
+    checkReady();
+  });
+}
+
+function initGsi() {
+  if (CLIENT_ID === 'YOUR_CLIENT_ID_HERE.apps.googleusercontent.com') {
+    document.getElementById('setupBanner').style.display = 'flex';
+    document.getElementById('authArea').innerHTML =
+      `<span style="font-size:11px;color:var(--text3)">CLIENT_ID 미설정</span>`;
+    return;
+  }
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly',
+    callback: onTokenReceived,
+  });
+  gsiReady = true;
+  checkReady();
+}
+
+function checkReady() {
+  if (gapiReady && gsiReady) {
+    renderAuthArea();
+  }
+}
+
+function renderAuthArea() {
+  const el = document.getElementById('authArea');
+  if (userInfo) {
+    const initials = (userInfo.name || userInfo.email || '?').substring(0, 2).toUpperCase();
+    el.innerHTML = `
+      <div class="google-avatar" title="${userInfo.email}" onclick="signOut()">
+        ${initials}
+      </div>`;
+  } else {
+    el.innerHTML = `
+      <button class="btn-google" onclick="signIn()">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+        </svg>
+        Google 로그인
+      </button>`;
+  }
+}
+
+function signIn() {
+  tokenClient.requestAccessToken({ prompt: 'consent' });
+}
+
+function signOut() {
+  if (accessToken) google.accounts.oauth2.revoke(accessToken, () => {});
+  accessToken = null;
+  userInfo    = null;
+  renderAuthArea();
+  showToast('로그아웃됐습니다');
+}
+
+async function onTokenReceived(resp) {
+  if (resp.error) { console.error(resp); return; }
+  accessToken = resp.access_token;
+  gapi.client.setToken({ access_token: accessToken });
+
+  // 사용자 정보 조회
+  try {
+    const r = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    userInfo = await r.json();
+  } catch(e) { userInfo = { name: '사용자', email: '' }; }
+
+  renderAuthArea();
+  showToast(`${userInfo.name || userInfo.email}으로 로그인됐습니다`);
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 3. Google Drive 연동
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// 추출용 폴더 ID 찾기: 건강검진 > 추출용
+async function findExtractFolderId() {
+  // 1단계: 최상위 폴더
+  const r1 = await gapi.client.drive.files.list({
+    q: `name='${DRIVE_ROOT_FOLDER}' and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+    fields: 'files(id,name)', pageSize: 1,
+  });
+  if (!r1.result.files?.length)
+    throw new Error(`Google Drive에서 "${DRIVE_ROOT_FOLDER}" 폴더를 찾을 수 없습니다.`);
+  const rootId = r1.result.files[0].id;
+
+  // 2단계: 하위 폴더
+  const r2 = await gapi.client.drive.files.list({
+    q: `name='${DRIVE_SUB_FOLDER}' and mimeType='application/vnd.google-apps.folder' and '${rootId}' in parents and trashed=false`,
+    fields: 'files(id,name)', pageSize: 1,
+  });
+  if (!r2.result.files?.length)
+    throw new Error(`"${DRIVE_ROOT_FOLDER}" 안에 "${DRIVE_SUB_FOLDER}" 폴더를 찾을 수 없습니다.`);
+  return r2.result.files[0].id;
+}
+
+// 추출용 폴더에서 연도.pdf 파일 찾기
+async function findYearPdf(extractFolderId, year) {
+  const resp = await gapi.client.drive.files.list({
+    q: `name='${year}.pdf' and '${extractFolderId}' in parents and trashed=false`,
+    fields: 'files(id,name,mimeType)', pageSize: 1,
+  });
+  if (!resp.result.files?.length)
+    throw new Error(`"${DRIVE_SUB_FOLDER}" 폴더에서 "${year}.pdf" 파일을 찾을 수 없습니다.\nDrive 경로: ${DRIVE_ROOT_FOLDER} > ${DRIVE_SUB_FOLDER} > ${year}.pdf`);
+  return resp.result.files[0];
+}
+
+// 파일 다운로드 → base64
+async function downloadFileAsBase64(fileId) {
+  const resp = await fetch(
+    `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+  if (!resp.ok) throw new Error(`파일 다운로드 실패: ${resp.statusText}`);
+  const blob = await resp.blob();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve({ b64: reader.result.split(',')[1], mime: blob.type });
+    reader.onerror  = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 4. 텍스트 추출 (PDF: 직접파싱 / 이미지: Vision API)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// PDF에서 텍스트 추출 (pdf.js 사용)
+async function extractTextFromPdf(b64) {
+  // pdf.js 동적 로드
+  if (!window.pdfjsLib) {
+    await new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      s.onload = resolve; s.onerror = reject;
+      document.head.appendChild(s);
+    });
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+
+  const binary = atob(b64);
+  const bytes  = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+
+  const pdf   = await window.pdfjsLib.getDocument({ data: bytes }).promise;
+  let allText = '';
+
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const page    = await pdf.getPage(p);
+    const content = await page.getTextContent();
+    // 각 텍스트 아이템을 y좌표 기준으로 줄 묶음 처리
+    const items = content.items.map(i => ({
+      str: i.str, x: Math.round(i.transform[4]), y: Math.round(i.transform[5])
+    }));
+    // y값이 같은(±4px) 아이템끼리 같은 줄로 묶고 x순 정렬
+    const rows = {};
+    for (const it of items) {
+      const key = Math.round(it.y / 5) * 5;
+      if (!rows[key]) rows[key] = [];
+      rows[key].push(it);
+    }
+    const lines = Object.keys(rows)
+      .sort((a, b) => b - a) // y 내림차순 = 위에서 아래
+      .map(k => rows[k].sort((a,b) => a.x - b.x).map(i => i.str).join('  '));
+    allText += lines.join('\n') + '\n';
+  }
+  return allText;
+}
+
+// 이미지 → Vision API OCR
+async function extractTextFromImage(b64) {
+  const visionResp = await fetch(
+    `https://vision.googleapis.com/v1/images:annotate?key=${VISION_API_KEY}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        requests: [{
+          image: { content: b64 },
+          features: [{ type: 'DOCUMENT_TEXT_DETECTION', maxResults: 1 }]
+        }]
+      })
+    }
+  );
+  if (!visionResp.ok) {
+    const err = await visionResp.json();
+    throw new Error(`Vision API 오류: ${err.error?.message || visionResp.statusText}`);
+  }
+  const result = await visionResp.json();
+  return result.responses?.[0]?.fullTextAnnotation?.text || '';
+}
+
+// 파일 종류에 따라 텍스트 추출 분기
+async function extractCheckupData(b64, mimeType) {
+  let fullText = '';
+
+  if (mimeType === 'application/pdf') {
+    setLoadingText('PDF 텍스트 추출 중...');
+    fullText = await extractTextFromPdf(b64);
+  } else {
+    setLoadingText('이미지 OCR 처리 중...');
+    fullText = await extractTextFromImage(b64);
+  }
+
+  if (!fullText.trim()) throw new Error('파일에서 텍스트를 인식하지 못했습니다.');
+
+  console.log('[텍스트 추출 원문]\n', fullText);
+  return parseCheckupText(fullText);
+}
+
+// 검진 결과 텍스트 파싱
+// 지원 형식: "항목명[한글]  현재값  이전값  참조범위  단위"
+function parseCheckupText(text) {
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+  const items = [];
+  const seen  = new Set();
+  let currentCat = '';
+
+  function matchUnit(line) {
+    const units = ['g/dL','mg/dL','ng/mL','ng/dL','ug/dL','mmol/L','mg/L','mL/min',
+      'U/L','IU/L','U/mL','uIU/mL','S/CO','rate/min','x 10','fL','pg','mmHg','cm'];
+    for (const u of units) { if (line.includes(u)) return u; }
+    if (/%/.test(line)) return '%';
+    return '';
+  }
+
+  const SKIP_KEYWORDS = [
+    '소견','이전결과','참고','판정','sample','m-check','종합','report',
+    '미해당','추적','바랍니다','권장','관련',
+    '한국인평균위험도','한국인평균','발병','예방','증상','치료','식이',
+    '운동','섭취','관리','유전자명','준값인','생명윤리','의뢰기관','분석기관',
+    '검사자','책임자','숙련도','정도관리','보관','폐기',
+    'examination items','previous result','comprehensive'
+  ];
+  // 음성/양성은 수치가 없는 줄에만 적용 (수치 있는 간염 항목 파싱 허용)
+  function shouldSkip(line) {
+    if (SKIP_KEYWORDS.some(k => line.toLowerCase().includes(k))) return true;
+    // 수치 없이 음성/양성만 있는 줄 제외
+    if (/^[가-힣A-Za-z\s\[\]()]+\s+(음성|양성)\s*(음성|양성)?$/.test(line.trim())) return true;
+    return false;
+  }
+  // 항목명 자체를 걸러낼 패턴
+  const SKIP_NAMES = /^([가-힣]{1,2}(규환|연락|성명|나이)|남$|여$|과$|준값인|유전자명|연락처|고유검체번호|검사항목수|결과보고일|검체접수일|의뢰의)/;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    // >> / » 카테고리 헤더 감지 (숫자 없고, 영어 괄호 제거 후 2~20자)
+    if (/^[>»]{1,2}\s+/.test(line)) {
+      // ">> 카테고리명 (영문명)" 형태에서 카테고리명만 추출
+      const catLabel = line
+        .replace(/^[>»\s]+/, '')
+        .replace(/\s*\([^)]*\)\s*$/, '')
+        .trim();
+      if (catLabel.length >= 2 && catLabel.length <= 25 && !/\d/.test(catLabel)) {
+        currentCat = catLabel;
+      }
+      continue;
+    }
+
+    if (shouldSkip(line)) continue;
+
+    // 대괄호 패턴: 항목명[영문] 수치
+    const bracketMatch = line.match(/^(.+?)\[(.+?)\]\s+>?\s*([\d.]+)/);
+    if (bracketMatch) {
+      const rawName = bracketMatch[1].trim();
+      const value   = parseFloat(bracketMatch[3]);
+      if (isNaN(value) || value <= 0) continue;
+      if (SKIP_NAMES.test(rawName)) continue;
+      const key = rawName.toLowerCase().replace(/\s/g,'');
+      if (seen.has(key)) continue;
+      seen.add(key);
+      items.push({ name: rawName, value, unit: matchUnit(line), pdfCat: currentCat });
+      continue;
+    }
+
+    // 단순 패턴: 항목명  수치  (한글/영문 혼합)
+    const simpleMatch = line.match(/^([가-힣A-Za-z][가-힣A-Za-z\s\(\)\-\.]{1,25}?)\s{2,}([\d.]+)/);
+    if (simpleMatch) {
+      const rawName = simpleMatch[1].trim();
+      const value   = parseFloat(simpleMatch[2]);
+      if (isNaN(value) || value <= 0 || /^\d/.test(rawName)) continue;
+      if (SKIP_NAMES.test(rawName)) continue;
+      // 날짜 형식 제외 (2026, 2025 등 연도)
+      if (value > 2000 && value < 2100) continue;
+      const key = rawName.toLowerCase().replace(/\s/g,'');
+      if (seen.has(key)) continue;
+      seen.add(key);
+      items.push({ name: rawName, value, unit: matchUnit(line), pdfCat: currentCat });
+    }
+  }
+
+  // 카테고리 후보 줄 찾아서 로그
+  const catCandidates = text.split('\n')
+    .map(l => l.trim())
+    .filter(l => l.length > 2 && l.length < 40 && !/\d{4}-\d{2}/.test(l) && !/[\[\]]/.test(l))
+    .filter(l => /검사|기능|측정|계측|호르몬|지질|혈액|혈압|신장|간|신체|당|종양|암|심장|청력|안과|구강/.test(l));
+  console.log('[카테고리 후보]', catCandidates);
+
+  // >> 또는 » 포함 줄 찾기
+  const catLines = text.split('\n').filter(l => /[»>]{1,2}/.test(l)).map(l => l.trim());
+  console.log('[>> 패턴 줄]', catLines);
+
+  console.log('[파싱]', items.length, '개:',
+    items.map(i => (i.pdfCat||'?') + '>' + i.name + ':' + i.value).join(', '));
+  if (items.length === 0) throw new Error('검진 수치를 파싱하지 못했습니다.');
+  return { items };
+}
+
+// PDF 카테고리명 → 기존 카테고리 ID 매핑 (없으면 신규 생성)
+function resolveCatId(pdfCatLabel) {
+  if (!pdfCatLabel) return 'etc';
+  // 기존 카테고리에서 유사한 것 찾기
+  const norm = s => s.toLowerCase().replace(/[\s\-_()（）]/g,'');
+  const normLabel = norm(pdfCatLabel);
+  const existing = CATEGORIES.find(c => {
+    const nc = norm(c.label);
+    return nc === normLabel || nc.includes(normLabel) || normLabel.includes(nc);
+  });
+  if (existing) return existing.id;
+  // 없으면 신규 카테고리 생성
+  const newId = 'pdf_' + normLabel.replace(/[^a-z0-9가-힣]/g,'').substring(0,12) + '_' + Date.now().toString(36);
+  CATEGORIES.push({ id: newId, label: pdfCatLabel });
+  return newId;
+}
+
+// OCR 결과 → 기존 항목 매핑
+function mapOcrToItems(ocrItems) {
+  const matched   = {};
+  const unmatched = [];
+  const normalize = s => s.toLowerCase().replace(/[\s\-_·()（）\[\]\/]/g, '');
+
+  // pdfCat 기반 카테고리 추정 테이블 (PDF >> 헤더 추출 안 될 때 항목명으로 추정)
+  const CAT_HINTS = {
+    'blood':   ['wbc','rbc','hb','hct','platelet','mpv','pdw','pct','mcv','mch','mchc','rdw','neutrophil','lymphocyte','monocyte','eosinophil','basophil','iron','tibc','uibc','hemoglobin','hematocrit','백혈구','적혈구','혈색소','혈소판','호중구','림프구','단핵구','호산구','호염기구','혈청철'],
+    'lipid':   ['cholesterol','triglyceride','hdl','ldl','crf','콜레스테롤','중성지방','지질'],
+    'liver':   ['ast','alt','sgot','sgpt','ggt','gtp','bilirubin','alp','ldh','protein','albumin','globulin','afp','빌리루빈','알부민','글로불린','알칼리','유산탈수소','총단백'],
+    'kidney':  ['bun','creatinine','gfr','uricacid','sodium','potassium','chloride','psa','cpk','요소질소','크레아티닌','신사구체','나트륨','칼륨','염소','전립선','크레아틴'],
+    'glucose': ['glucose','hba1c','혈당','당화혈색소'],
+    'bp':      ['systolic','diastolic','bmi','혈압','체질량','bodymass'],
+    'body':    ['height','weight','waist','obesity','skeletal','bodyfat','pulse','신장','체중','허리','비만','골격','체지방','맥박'],
+    'thyroid': ['tsh','freet4','갑상선','싸이록신'],
+    'tumor':   ['cea','ca19','afp','psa','amylase','암항원','태아성','아밀라아제','전립선특이'],
+    'etc':     ['phosphorus','calcium','rafactor','인','칼슘','류마티스'],
+  };
+
+  function guessCat(normName) {
+    for (const [catId, keywords] of Object.entries(CAT_HINTS)) {
+      if (keywords.some(k => normName.includes(k))) return catId;
+    }
+    return 'etc';
+  }
+
+  const ALIASES = {
+    'hb':       ['hemoglobin','hb[','혈색소['],
+    'hct':      ['hematocrit','hct[','적혈구용적['],
+    'wbc':      ['wbc[','백혈구['],
+    'rbc':      ['rbc[','적혈구['],
+    'plt':      ['platelet','혈소판[','plt['],
+    'mpv':      ['mpv[','평균혈소판'],
+    'pdw':      ['pdw[','혈소판분포'],
+    'pct':      ['pct[','혈소판용적백분율'],
+    'mcv':      ['mcv[','평균적혈구용적'],
+    'mch':      ['mch[','평균적혈구혈색소용량'],
+    'mchc':     ['mchc[','평균적혈구혈색소농도'],
+    'rdw':      ['rdw[','적혈구분포'],
+    'neut':     ['neutrophil','호중구['],
+    'lymp':     ['lymphocyte','림프구['],
+    'mono':     ['monocyte','단핵구['],
+    'eosi':     ['eosinophil','호산구['],
+    'baso':     ['basophil','호염기구['],
+    'fe':       ['iron(fe)','iron[','혈청철[','철['],
+    'tibc':     ['tibc[','철결합능['],
+    'uibc':     ['uibc[','불포화철'],
+    'tp':       ['totalprotein','총단백정량','totalprotein['],
+    'alb':      ['albumin[','알부민['],
+    'glob':     ['globulin[','글로블린['],
+    'ast':      ['ast(sgot)','ast[','sgot','혈청지오티'],
+    'alt':      ['alt(sgpt)','alt[','sgpt','혈청지피티'],
+    'ggt':      ['γ-gtp','ggtp','ggt[','글루타민환원'],
+    'alp':      ['alk-phosphatase','alkphosphatase','알칼리포스파타제'],
+    'ldh':      ['ldh[','유산탈수소'],
+    'tbil':     ['totalbilirubin','총빌리루빈['],
+    'dbil':     ['directbilirubin','직접빌리루빈['],
+    'ibil':     ['indirectbilirubin','간접빌리루빈['],
+    'hbsag':    ['hbsag','hbsag[','b형간염표면항원'],
+    'hbsab':    ['hbsab','hbsab[','b형간염표면항체'],
+    'hcvab':    ['hcvab','hcvab[','c형간염항체'],
+    'havigg':   ['havigg','havigg[','a형간염항체'],
+    'bun':      ['bun[','혈중요소질소['],
+    'cr':       ['creatinine[','혈청크레아티닌['],
+    'gfr':      ['gfr[','신사구체여과율['],
+    'ua':       ['uricacid','요산[','uricacid['],
+    'cpk':      ['cpk[','크레아틴인산활성'],
+    'sgrav':    ['specificgravity','요비중['],
+    'uph':      ['u.ph[','수소이온농도['],
+    'fbg':      ['glucose[','혈당[','공복혈당'],
+    'hba1':     ['hba1c[','당화혈색소['],
+    'tc':       ['totalcholesterol','총콜레스테롤[','총콜레스테롤'],
+    'tg':       ['triglyceride[','중성지방['],
+    'hdl':      ['hdlcholesterol','hdlcholesterol[','고밀도콜레스테롤'],
+    'ldl':      ['ldlcholesterol','ldlcholesterol[','저밀도콜레스테롤'],
+    'crf':      ['crf[','심장병위험'],
+    'tsh':      ['tsh[','갑상선자극호르몬['],
+    'ft4':      ['freet4','freet4[','유리싸이록신['],
+    'na':       ['sodium(na)','sodium[','나트륨['],
+    'k':        ['potassium(k)','potassium[','칼륨['],
+    'cl':       ['chloride(cl)','chloride[','염소['],
+    'phos':     ['phosphorus(p)','phosphorus[','인['],
+    'ca':       ['calcium(ca)','calcium[','칼슘['],
+    'afp':      ['α-fetoprotein','alphafetoprotein','알파태아단백'],
+    'cea':      ['cea[','태아성암항원['],
+    'ca199':    ['ca19-9','ca19-9[','암항원199'],
+    'psa':      ['psa[','전립선특이항원['],
+    'ra':       ['rafactor','rafactor[','류마티스인자'],
+    'amylase':  ['amylase[','총아밀라아제['],
+    'sbp':      ['수축기혈압[','systolicpressure','systolic['],
+    'dbp':      ['이완기혈압[','diastolicpressure','diastolic['],
+    'bmi':      ['bmi[','체질량지수[','bodymassindex'],
+    'pulse':    ['pulserate','맥박(','pulse['],
+    'height':   ['height]','신장['],
+    'weight':   ['weight]','체중['],
+    'waist':    ['waist]','허리둘레['],
+    'bfat':     ['percentagebody','체지방율['],
+    'bfatm':    ['bodyfatmass','체지방량['],
+    'muscle':   ['skeletalmuscle','골격근량['],
+    'obesity':  ['obesityindex','비만도['],
+    'iop_l':    ['안압[ocular','좌/우(l/r)'],
+    'hear_l':   ['audiogram(l)','청력(좌)'],
+    'hear_r':   ['audiogram(r)','청력(우)'],
+  };
+
+  for (const ocr of ocrItems) {
+    const normOcr = normalize(ocr.name);
+    let found = false;
+
+    // 1) 이름 직접 매핑
+    for (const item of ITEMS) {
+      const normItem = normalize(item.name);
+      if (normOcr === normItem || normOcr.includes(normItem) || normItem.includes(normOcr)) {
+        matched[item.id] = ocr.value;
+        found = true; break;
+      }
+    }
+
+    // 2) aliases 매핑
+    if (!found) {
+      outer: for (const [itemId, aliases] of Object.entries(ALIASES)) {
+        for (const a of aliases) {
+          if (normOcr.includes(normalize(a)) || normalize(a).includes(normOcr)) {
+            const item = ITEMS.find(i => i.id === itemId);
+            if (item) { matched[item.id] = ocr.value; found = true; break outer; }
+          }
+        }
+      }
+    }
+
+    if (!found) unmatched.push({ ...ocr, guessCat: guessCat(normOcr) });
+  }
+
+  return { matched, unmatched };
+}
+
+// 미매핑 항목을 PDF 카테고리 기준으로 자동 추가
+function autoAddUnmatched(unmatchedItems, yearName, yearData) {
+  for (const ocr of unmatchedItems) {
+    // pdfCat 있으면 우선, 없으면 guessCat으로 카테고리 결정
+    const catId = ocr.pdfCat ? resolveCatId(ocr.pdfCat) : (ocr.guessCat || 'etc');
+    // 이미 같은 이름 항목 있으면 스킵 (중복 방지)
+    const norm = s => s.toLowerCase().replace(/[\s\-_·()（）\[\]]/g,'');
+    const dup = ITEMS.find(i => norm(i.name) === norm(ocr.name));
+    if (dup) { yearData[dup.id] = ocr.value; continue; }
+    const newId = 'item_' + norm(ocr.name).substring(0,10) + '_' + Date.now().toString(36);
+    ITEMS.push({
+      id: newId, cat: catId,
+      name: ocr.name, unit: ocr.unit || '',
+      refMin: 0, refMax: 999,
+    });
+    yearData[newId] = ocr.value;
+  }
+  return yearData;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 5. 파일 선택 모달
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+let pickerFiles    = [];  // Drive에서 불러온 PDF 목록
+let pickerSelected = null; // 선택된 파일 id
+
+async function openFilePicker() {
+  document.getElementById('filePickerModal').style.display = 'flex';
+  document.getElementById('filePickerConfirm').disabled = true;
+  pickerSelected = null;
+  pickerFiles    = [];
+
+  const listEl = document.getElementById('fileList');
+
+  // 미로그인 상태
+  if (!accessToken) {
+    listEl.innerHTML = `<div class="file-list-empty">Google 로그인 후 사용할 수 있어요</div>`;
+    return;
+  }
+
+  listEl.innerHTML = `<div class="file-list-loading"><div class="mini-spinner"></div> Drive에서 파일 목록 불러오는 중...</div>`;
+
+  try {
+    const extractId = await findExtractFolderId();
+    const resp = await gapi.client.drive.files.list({
+      q: `'${extractId}' in parents and mimeType='application/pdf' and trashed=false`,
+      fields: 'files(id,name,modifiedTime)',
+      orderBy: 'name desc',
+      pageSize: 50,
+    });
+    pickerFiles = resp.result.files || [];
+
+    if (pickerFiles.length === 0) {
+      listEl.innerHTML = `<div class="file-list-empty">"${DRIVE_SUB_FOLDER}" 폴더에 PDF가 없습니다</div>`;
+      return;
+    }
+    renderFileList();
+  } catch(e) {
+    listEl.innerHTML = `<div class="file-list-empty" style="color:var(--red)">${e.message}</div>`;
+  }
+}
+
+function renderFileList() {
+  const listEl = document.getElementById('fileList');
+  listEl.innerHTML = pickerFiles.map(f => {
+    const yearName = f.name.replace(/\.pdf$/i, '');
+    const already  = years.includes(yearName);
+    const selected = pickerSelected === f.id;
+    return `<div class="file-item ${selected?'selected':''} ${already?'already':''}"
+      onclick="selectFile('${f.id}')">
+      <span class="file-icon">📄</span>
+      <div class="file-info">
+        <div class="file-name">${f.name}</div>
+        <span class="file-year-badge ${already?'done':''}">${already ? '이미 추가됨' : yearName+'년도'}</span>
+      </div>
+      <div class="file-check">${selected ? '✓' : ''}</div>
+    </div>`;
+  }).join('');
+}
+
+function selectFile(fileId) {
+  pickerSelected = fileId;
+  document.getElementById('filePickerConfirm').disabled = false;
+  renderFileList();
+}
+
+function closeFilePicker() {
+  document.getElementById('filePickerModal').style.display = 'none';
+}
+
+async function confirmFilePicker() {
+  if (!pickerSelected) return;
+  const file     = pickerFiles.find(f => f.id === pickerSelected);
+  const yearName = file.name.replace(/\.pdf$/i, '');
+
+  if (years.includes(yearName)) { showToast('이미 추가된 연도입니다'); return; }
+
+  closeFilePicker();
+  await runOcrFlow(yearName, file.id);
+}
+
+async function runOcrFlow(year, fileId) {
+  showLoading(`"${year}.pdf" 처리 중...`);
+  try {
+    setLoadingText(`PDF 텍스트 추출 중... (${year}.pdf)`);
+    const { b64 } = await downloadFileAsBase64(fileId);
+    const ocr     = await extractCheckupData(b64, 'application/pdf');
+    let allOcrItems = ocr.items || [];
+
+    setLoadingText('항목 매핑 중...');
+    const { matched, unmatched } = mapOcrToItems(allOcrItems);
+    hideLoading();
+    pendingYearName = year;
+    pendingYearData = matched;
+    if (unmatched.length > 0) {
+      pendingNewItems = unmatched;
+      showNewItemsReview(unmatched);
+    } else {
+      addYear(year, matched);
+      showToast(`"${year}" 완료 — ${Object.keys(matched).length}개 항목 입력됨`);
+    }
+
+  } catch(e) {
+    hideLoading();
+    alert(e.message || '오류가 발생했습니다');
+    addYear(year, {});
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 6. 신규 항목 팝업
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function showNewItemsReview(items) {
+  const catOptions = CATEGORIES.map(c =>
+    `<option value="${c.id}">${c.label}</option>`).join('');
+
+  function looksInvalid(name) {
+    const n = name.trim().replace(/\s/g,'');
+    if (/^\d+$/.test(n)) return true;
+    if (n.length <= 1) return true;
+    if (/^\d{4}-\d{2}/.test(n)) return true;
+    if (/^[a-zA-Z]{1,2}$/.test(n)) return true;
+    const junk = ['최소','최고','주의사항','업데이트','섭취하면','징역또는','과태료','이상의','이하의','검사항목수','연락처','고유검체','이전결과','검사일','보관'];
+    if (junk.some(k => n.includes(k))) return true;
+    return false;
+  }
+
+  let html = '';
+  items.forEach((item, idx) => {
+    const invalid = looksInvalid(item.name);
+    const gcat    = item.guessCat || 'etc';
+    html += `<div class="new-item-row ${invalid?'excluded':''}" id="nirow-${idx}">
+      <input type="checkbox" class="new-item-check" id="nicheck-${idx}"
+        ${!invalid?'checked':''} onchange="toggleNewItem(${idx})">
+      <span class="new-item-name">${item.name}</span>
+      <span class="new-item-val">${item.value}${item.unit?' '+item.unit:''}</span>
+      <select class="new-item-cat" id="nicat-${idx}" ${invalid?'disabled':''}>
+        ${catOptions}
+      </select>
+    </div>`;
+    setTimeout(((i,g) => () => {
+      const sel = document.getElementById('nicat-'+i);
+      if (sel) sel.value = g;
+    })(idx, gcat), 0);
+  });
+
+  document.getElementById('newItemsList').innerHTML = html;
+  updateNewItemsCount();
+  document.getElementById('newItemsModal').style.display = 'flex';
+}
+
+function toggleNewItem(idx) {
+  const chk = document.getElementById('nicheck-'+idx);
+  const row = document.getElementById('nirow-'+idx);
+  const sel = document.getElementById('nicat-'+idx);
+  row.classList.toggle('excluded', !chk.checked);
+  sel.disabled = !chk.checked;
+  updateNewItemsCount();
+}
+
+function toggleAllNewItems(val) {
+  pendingNewItems.forEach((_, idx) => {
+    const chk = document.getElementById('nicheck-'+idx);
+    if (chk) { chk.checked = val; toggleNewItem(idx); }
+  });
+}
+
+function updateNewItemsCount() {
+  const checked = document.querySelectorAll('.new-item-check:checked').length;
+  document.getElementById('newItemsCount').textContent =
+    checked + ' / ' + pendingNewItems.length + '개 선택됨';
+}
+
+function closeNewItemsModal() {
+  document.getElementById('newItemsModal').style.display = 'none';
+}
+
+function onNewCatChange(idx, val) {}
+
+function confirmNewItems() {
+  const norm = s => s.toLowerCase().replace(/[\s\-_()]/g,'');
+  pendingNewItems.forEach((ocr, idx) => {
+    const chk = document.getElementById('nicheck-'+idx);
+    if (!chk || !chk.checked) return;
+    const catId = document.getElementById('nicat-'+idx)?.value || 'etc';
+    const dup = ITEMS.find(i => norm(i.name) === norm(ocr.name));
+    if (dup) { pendingYearData[dup.id] = ocr.value; return; }
+    const newId = 'item_' + norm(ocr.name).substring(0,10) + '_' + Date.now().toString(36);
+    ITEMS.push({ id: newId, cat: catId, name: ocr.name, unit: ocr.unit||'', refMin:0, refMax:999 });
+    pendingYearData[newId] = ocr.value;
+  });
+  closeNewItemsModal();
+  addYear(pendingYearName, pendingYearData);
+  showToast('"' + pendingYearName + '" 데이터가 입력됐습니다');
+  pendingNewItems = []; pendingYearName = null; pendingYearData = {};
+}
+
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 7. UI 렌더링
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ── 인라인 항목 추가/수정 ──────────────────────────────
+function newRowHtml(catId, itemId) {
+  const isEdit = !!itemId;
+  const item   = isEdit ? ITEMS.find(i => i.id === itemId) : null;
+  const yearCells = selectedYears.map(y => {
+    const v = isEdit && data[y]?.[itemId] != null ? data[y][itemId] : '';
+    return `<td class="ni-year"><input class="ni" type="text" inputmode="decimal" placeholder="값" data-year="${y}" value="${v}" style="text-align:right"></td>`;
+  }).join('');
+
+  const catItems = ITEMS.filter(i => i.cat === (item?.cat||catId));
+  const itemIdx  = isEdit ? catItems.findIndex(i => i.id === itemId) : -1;
+  const movebtns = '';
+
+  return `<tr class="new-row" id="nr-${catId}">
+    <td>
+      <div style="display:flex;align-items:center;gap:4px;">
+        ${isEdit ? `<div style="display:flex;flex-direction:column;gap:1px;flex-shrink:0;">
+          <button class="btn-nr-cl" onclick="moveItem('${itemId}',-1)" title="위로" ${itemIdx<=0?'disabled':''} style="font-size:9px;width:18px;height:14px;padding:0;line-height:1;">▲</button>
+          <button class="btn-nr-cl" onclick="moveItem('${itemId}',1)" title="아래로" ${itemIdx>=catItems.length-1?'disabled':''} style="font-size:9px;width:18px;height:14px;padding:0;line-height:1;">▼</button>
+        </div>` : ''}
+        <input class="ni" id="nr-name-${catId}" type="text" placeholder="항목명" value="${item?.name||''}" style="flex:1;">
+      </div>
+    </td>
+    <td>
+      <div class="ref-wrap">
+        <input class="ni" id="nr-min-${catId}" type="text" inputmode="decimal" placeholder="최소" value="${item&&item.refMin!==0?item.refMin:''}">
+        <span class="ref-sep">~</span>
+        <input class="ni" id="nr-max-${catId}" type="text" inputmode="decimal" placeholder="최대" value="${item&&item.refMax!==999?item.refMax:''}">
+        <input class="ni unit" id="nr-unit-${catId}" type="text" placeholder="단위" value="${item?.unit||''}">
+      </div>
+    </td>
+    ${yearCells}
+    <td style="width:100%"></td>
+    <td>
+      <div class="new-row-btns">
+        ${movebtns}
+        <button class="btn-nr-ok" onclick="${isEdit?`confirmEditRow('${catId}','${itemId}')`:`confirmAddRow('${catId}')`}" title="${isEdit?'저장':'추가'}">✓</button>
+        <button class="btn-nr-cl" onclick="removeNewRow('${catId}')" title="취소">✕</button>
+      </div>
+    </td>
+  </tr>`;
+}
+
+function showAddRow(catId) {
+  if (document.querySelector('.new-row')) return; // 이미 편집 중
+  const tbl = document.getElementById('tbl-'+catId);
+  if (!tbl) return;
+  tbl.querySelector('tbody').insertAdjacentHTML('beforeend', newRowHtml(catId, null));
+  // 모든 + 항목 추가 버튼 비활성화
+  document.querySelectorAll('.btn-add-item').forEach(b => {
+    b.disabled = true; b.style.opacity = '0.4'; b.style.pointerEvents = 'none';
+  });
+  setTimeout(() => document.getElementById('nr-name-'+catId)?.focus(), 50);
+}
+
+function showEditRow(itemId) {
+  const item = ITEMS.find(i => i.id === itemId);
+  if (!item) return;
+  removeNewRow(item.cat);
+  const tbl = document.getElementById('tbl-'+item.cat);
+  if (!tbl) return;
+  tbl.querySelector('tbody').insertAdjacentHTML('beforeend', newRowHtml(item.cat, itemId));
+  setTimeout(() => document.getElementById('nr-name-'+item.cat)?.focus(), 50);
+}
+
+function removeNewRow(catId) {
+  document.getElementById('nr-'+catId)?.remove();
+  // 버튼 재활성화
+  document.querySelectorAll('.btn-add-item').forEach(b => {
+    b.disabled = false; b.style.opacity = ''; b.style.pointerEvents = '';
+  });
+}
+
+function confirmAddRow(catId) {
+  const name = document.getElementById('nr-name-'+catId)?.value.trim();
+  if (!name) { showToast('항목명을 입력하세요'); return; }
+  const refMin = parseFloat(document.getElementById('nr-min-'+catId)?.value) || 0;
+  const refMax = parseFloat(document.getElementById('nr-max-'+catId)?.value) || 999;
+  const unit   = document.getElementById('nr-unit-'+catId)?.value.trim() || '';
+  const newId  = 'manual_' + name.replace(/[^a-z0-9가-힣]/gi,'').substring(0,10).toLowerCase() + '_' + Date.now().toString(36);
+  ITEMS.push({ id: newId, cat: catId, name, unit, refMin, refMax });
+
+  // 연도별 값 저장
+  document.querySelectorAll(`#nr-${catId} input[data-year]`).forEach(inp => {
+    const y = inp.dataset.year;
+    const v = parseFloat(inp.value);
+    if (!isNaN(v)) { if (!data[y]) data[y] = {}; data[y][newId] = v; }
+  });
+
+  removeNewRow(catId);
+  saveState(); renderSidebar(); renderTableView();
+  showToast(`"${name}" 항목이 추가됐습니다`);
+}
+
+function moveItem(itemId, dir) {
+  const item    = ITEMS.find(i => i.id === itemId);
+  if (!item) return;
+  const catItems = ITEMS.filter(i => i.cat === item.cat);
+  const globalIdx = ITEMS.findIndex(i => i.id === itemId);
+  const catIdx    = catItems.findIndex(i => i.id === itemId);
+  const targetCatIdx = catIdx + dir;
+  if (targetCatIdx < 0 || targetCatIdx >= catItems.length) return;
+  const targetItem = catItems[targetCatIdx];
+  const targetGlobalIdx = ITEMS.findIndex(i => i.id === targetItem.id);
+  // swap
+  [ITEMS[globalIdx], ITEMS[targetGlobalIdx]] = [ITEMS[targetGlobalIdx], ITEMS[globalIdx]];
+  saveState();
+  // 편집행 유지하면서 갱신
+  const catId = item.cat;
+  removeNewRow(catId);
+  renderSidebar();
+  renderTableView();
+  setTimeout(() => showEditRow(itemId), 50);
+}
+
+function confirmEditRow(catId, itemId) {
+  const item = ITEMS.find(i => i.id === itemId);
+  if (!item) return;
+  const name = document.getElementById('nr-name-'+catId)?.value.trim();
+  if (!name) { showToast('항목명을 입력하세요'); return; }
+  item.name   = name;
+  item.refMin = parseFloat(document.getElementById('nr-min-'+catId)?.value) || 0;
+  item.refMax = parseFloat(document.getElementById('nr-max-'+catId)?.value) || 999;
+  item.unit   = document.getElementById('nr-unit-'+catId)?.value.trim() || '';
+
+  document.querySelectorAll(`#nr-${catId} input[data-year]`).forEach(inp => {
+    const y = inp.dataset.year;
+    const v = parseFloat(inp.value);
+    if (!data[y]) data[y] = {};
+    if (!isNaN(v)) data[y][itemId] = v;
+    else delete data[y][itemId];
+  });
+
+  removeNewRow(catId);
+  saveState(); renderSidebar(); renderTableView();
+  showToast(`"${name}" 항목이 수정됐습니다`);
+}
+
+function addYear(year, yearData) {
+  years.push(year);
+  years.sort();
+  data[year] = yearData;
+  if (!selectedYears.includes(year)) {
+    selectedYears.push(year);
+    selectedYears.sort();
+  }
+  saveState();
+  renderChips();
+  renderSidebar();
+  // 항상 테이블 뷰 갱신 (데이터 추가 후 즉시 반영)
+  activeId = null;
+  renderTableView();
+}
+
+function getStatus(item, val) {
+  if (val == null) return 'none';
+  if (item.refMax === 999) return val >= item.refMin ? 'normal' : 'danger';
+  if (item.refMin === 0)   return val <= item.refMax ? 'normal' : (val > item.refMax * 1.2 ? 'danger' : 'warning');
+  if (val < item.refMin || val > item.refMax) {
+    const range = item.refMax - item.refMin;
+    const over  = Math.max(item.refMin - val, val - item.refMax);
+    return over / range > 0.15 ? 'danger' : 'warning';
+  }
+  return 'normal';
+}
+
+function fmtRef(item) {
+  if (item.refMin === 0)   return `< ${item.refMax} ${item.unit}`;
+  if (item.refMax === 999) return `— ${item.unit}`;
+  return `${item.refMin}–${item.refMax} ${item.unit}`;
+}
+
+function worstStatus(item) {
+  const order = ['none','normal','warning','danger'];
+  let worst = 'none';
+  for (const y of selectedYears) {
+    const st = getStatus(item, data[y]?.[item.id]);
+    if (order.indexOf(st) > order.indexOf(worst)) worst = st;
+  }
+  return worst;
+}
+
+function renderChips() {
+  const allOn = years.every(y => selectedYears.includes(y));
+  let html = `<span class="chip-all" onclick="toggleAll()"
+    style="${allOn?'background:var(--surface2);':''}"
+  >모두 선택</span>`;
+  html += `<span class="chip-divider"></span>`;
+  html += years.map(y =>
+    `<span class="chip ${selectedYears.includes(y)?'on':''}" onclick="toggleYear('${y}')">
+      <span class="chip-inner">
+        ${y}
+        <span class="chip-del" onclick="deleteYear(event,'${y}')" title="${y} 삭제">✕</span>
+      </span>
+    </span>`
+  ).join('');
+  document.getElementById('yearChips').innerHTML = html;
+}
+
+function toggleAll() {
+  if (years.every(y => selectedYears.includes(y))) {
+    selectedYears = [years[years.length - 1]];
+  } else {
+    selectedYears = [...years];
+  }
+  renderChips(); renderSidebar();
+  if (activeId) renderDetail(activeId); else renderTableView();
+}
+
+function toggleYear(y) {
+  if (selectedYears.includes(y)) {
+    if (selectedYears.length === 1) return;
+    selectedYears = selectedYears.filter(x => x !== y);
+  } else {
+    selectedYears.push(y); selectedYears.sort();
+  }
+  renderChips(); renderSidebar();
+  if (activeId) renderDetail(activeId); else renderTableView();
+}
+
+function deleteYear(e, y) {
+  e.stopPropagation();
+  if (!confirm(`"${y}" 연도 데이터를 삭제할까요?\n이 작업은 되돌릴 수 없습니다.`)) return;
+  years = years.filter(x => x !== y);
+  delete data[y];
+  selectedYears = selectedYears.filter(x => x !== y);
+  if (selectedYears.length === 0 && years.length > 0) selectedYears = [years[years.length - 1]];
+  saveState();
+  renderChips();
+  renderSidebar();
+  if (activeId) renderDetail(activeId); else renderTableView();
+  showToast(`"${y}" 연도가 삭제됐습니다`);
+}
+
+function renderSidebar() {
+  let html = '';
+  for (const cat of CATEGORIES) {
+    const items  = ITEMS.filter(i => i.cat === cat.id);
+    const closed = collapsedCats[cat.id];
+    html += `<div class="cat-header ${closed?'closed':''}"
+      ondragover="onCatDragOver(event,'${cat.id}')"
+      ondragleave="onCatDragLeave(event)"
+      ondrop="onCatDrop(event,'${cat.id}')">
+      <span class="drag-handle"
+        draggable="true"
+        ondragstart="onCatDragStart(event,'${cat.id}')">⠿</span>
+      <span class="cat-toggle" onclick="toggleCat('${cat.id}')" style="flex:1;display:flex;align-items:center;gap:4px;min-width:0;">
+        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${cat.label}</span>
+        <span class="cat-arrow">▾</span>
+      </span>
+      <button class="cat-del-btn" onclick="deleteCat('${cat.id}')" title="카테고리 삭제">✕</button>
+    </div>`;
+    if (!closed) {
+      for (const item of items) {
+        const st = worstStatus(item);
+        const dotCls = st==='danger'?'dot-danger':st==='warning'?'dot-warning':st==='normal'?'dot-normal':'dot-none';
+        html += `<div class="item-btn ${activeId===item.id?'active':''}" onclick="selectItem('${item.id}')">
+          <span class="status-dot ${dotCls}"></span>
+          <span class="item-label">${item.name}</span>
+          <span class="item-del" onclick="event.stopPropagation();deleteItem(event,'${item.id}')" title="항목 삭제">✕</span>
+        </div>`;
+      }
+    }
+  }
+  document.getElementById('sidebar').innerHTML = html;
+}
+
+function addCategory() {
+  // 카테고리N 자동 넘버링
+  const usedNums = CATEGORIES
+    .map(c => c.label.match(/^카테고리(\d+)$/))
+    .filter(Boolean).map(m => parseInt(m[1]));
+  let n = 1;
+  while (usedNums.includes(n)) n++;
+  const newId = 'custom_cat_' + Date.now().toString(36);
+  CATEGORIES.push({ id: newId, label: '카테고리' + n });
+  saveState();
+  renderSidebar();
+  renderTableView();
+  showToast('카테고리' + n + ' 추가됐습니다');
+}
+
+function deleteCat(catId) {
+  const cat = CATEGORIES.find(c => c.id === catId);
+  const itemCount = ITEMS.filter(i => i.cat === catId).length;
+  if (!confirm(`"${cat?.label}" 카테고리와 하위 항목 ${itemCount}개를 모두 삭제할까요?`)) return;
+  ITEMS = ITEMS.filter(i => i.cat !== catId);
+  const idx = CATEGORIES.findIndex(c => c.id === catId);
+  if (idx !== -1) CATEGORIES.splice(idx, 1);
+  if (activeId && !ITEMS.find(i => i.id === activeId)) {
+    activeId = null;
+    document.getElementById('detail').innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><div style="font-size:13px;color:var(--text3)">좌측에서 검진 항목을 선택하세요</div></div>`;
+  }
+  saveState(); renderSidebar(); renderTableView();
+  showToast(`"${cat?.label}" 카테고리가 삭제됐습니다`);
+}
+
+function deleteItem(e, itemId) {
+  e.stopPropagation();
+  const item = ITEMS.find(i => i.id === itemId);
+  if (!confirm(`"${item?.name}" 항목을 삭제할까요?`)) return;
+  ITEMS = ITEMS.filter(i => i.id !== itemId);
+  if (activeId === itemId) {
+    activeId = null;
+    document.getElementById('detail').innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><div style="font-size:13px;color:var(--text3)">좌측에서 검진 항목을 선택하세요</div></div>`;
+  }
+  saveState(); renderSidebar(); renderTableView();
+  showToast(`"${item?.name}" 항목이 삭제됐습니다`);
+}
+
+function toggleCat(id) { collapsedCats[id] = !collapsedCats[id]; renderSidebar(); }
+
+// 카테고리 드래그 순서 변경
+let dragCatId = null;
+function onCatDragStart(e, catId) {
+  dragCatId = catId;
+  e.dataTransfer.effectAllowed = 'move';
+}
+function onCatDragOver(e, catId) {
+  if (catId === dragCatId) return;
+  e.preventDefault();
+  e.currentTarget.classList.add('drag-over');
+}
+function onCatDragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
+function onCatDrop(e, targetId) {
+  e.currentTarget.classList.remove('drag-over');
+  if (!dragCatId || dragCatId === targetId) return;
+  const fromIdx = CATEGORIES.findIndex(c => c.id === dragCatId);
+  const toIdx   = CATEGORIES.findIndex(c => c.id === targetId);
+  if (fromIdx < 0 || toIdx < 0) return;
+  const [moved] = CATEGORIES.splice(fromIdx, 1);
+  CATEGORIES.splice(toIdx, 0, moved);
+  dragCatId = null;
+  saveState(); renderSidebar(); renderTableView();
+}
+
+function selectItem(id) {
+  activeId = id;
+  renderSidebar();
+  renderDetail(id);
+}
+
+// ── 전체 항목 테이블 뷰 ──
+let searchKeyword = '';
+
+function doSearch() {
+  searchKeyword = document.getElementById('searchInput').value.trim();
+  renderTableView();
+}
+
+function clearSearch() {
+  searchKeyword = '';
+  document.getElementById('searchInput').value = '';
+  renderTableView();
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.activeElement.id === 'searchInput') doSearch();
+});
+
+function renderTableView() {
+  const visYears = selectedYears;
+  const latestY  = visYears[visYears.length - 1];
+
+  // 항목명 최대 길이 계산 → 컬럼 너비 동적 결정
+  // 한글 1자 ≈ 14px, 영문/숫자 1자 ≈ 8px 기준
+  function measureText(str) {
+    let w = 0;
+    for (const ch of str) { w += /[가-힣]/.test(ch) ? 14 : 8; }
+    return w;
+  }
+  const maxNameW = ITEMS.reduce((mx, i) => Math.max(mx, measureText(i.name)), 80);
+  const nameColW = Math.round(maxNameW * 1.1) + 24; // 110% + padding
+  document.documentElement.style.setProperty('--tv-name-w', nameColW + 'px');
+
+  // 연도 헤더
+  const yearHeaders = visYears.map(y =>
+    `<th>${y}${y === latestY ? ' ★' : ''}</th>`).join('');
+
+  let html = '<div class="table-view">';
+
+  for (const cat of CATEGORIES) {
+    const kw = searchKeyword.toLowerCase();
+    const items = ITEMS.filter(i => i.cat === cat.id &&
+      (!kw || i.name.toLowerCase().includes(kw)));
+    // 검색 중에는 결과없는 카테고리 숨김, 평상시엔 빈 카테고리도 표시
+    if (kw && items.length === 0) continue;
+
+    let rows = '';
+    if (items.length === 0) {
+      rows = `<tr><td colspan="${2 + visYears.length + 1}" style="padding:12px 14px;font-size:12px;color:var(--text3);text-align:center;">항목이 없습니다. + 항목 추가를 눌러 추가하세요.</td></tr>`;
+    }
+    for (const item of items) {
+      const vals = visYears.map(y => data[y]?.[item.id]);
+      const latestVal = vals[vals.length - 1];
+      const st = getStatus(item, latestVal);
+      const valCls = st === 'danger' ? 'tv-val-danger' : st === 'warning' ? 'tv-val-warning' : 'tv-val-normal';
+
+      const cells = visYears.map((y, idx) => {
+        const v = data[y]?.[item.id];
+        const s = getStatus(item, v);
+        const vc = s === 'danger' ? 'tv-val-danger' : s === 'warning' ? 'tv-val-warning' : 'tv-val-normal';
+        let delta = '';
+        if (idx > 0) {
+          const prev = data[visYears[idx-1]]?.[item.id];
+          if (v != null && prev != null) {
+            const d = +(v - prev).toFixed(2);
+            if (Math.abs(d) >= 0.01)
+              delta = `<span class="${d>0?'tv-delta-up':'tv-delta-down'}">${d>0?'▲':'▼'}${Math.abs(d)}</span>`;
+          }
+        }
+        return `<td><span class="${vc}">${v != null ? v : '—'}</span> ${delta}</td>`;
+      }).join('');
+
+      const isManual = item.id.startsWith('item_') || item.id.startsWith('manual_');
+      rows += `<tr onclick="selectItem('${item.id}')">
+        <td>
+          <span style="display:flex;align-items:center;gap:4px;">
+            <span>${item.name}${isManual ? '<span class="tag-m">수동</span>' : ''}</span>
+            <span class="row-actions" onclick="event.stopPropagation()">
+              <button class="ic" onclick="event.stopPropagation();showEditRow('${item.id}')" title="수정">✎</button>
+              <button class="ic ic-del" onclick="event.stopPropagation();if(confirm('&quot;${item.name}&quot; 항목을 삭제할까요?')){ITEMS=ITEMS.filter(i=>i.id!=='${item.id}');saveState();renderSidebar();renderTableView();showToast('삭제됐습니다');}" title="삭제">✕</button>
+            </span>
+          </span>
+        </td>
+        <td style="color:var(--text3);font-size:11px">${fmtRef(item)}</td>
+        ${cells}
+        <td style="width:100%"></td>
+      </tr>`;
+    }
+
+    html += `<div class="tv-cat">
+      <div class="tv-cat-header">
+        <div class="tv-cat-header-bar"></div>
+        <span class="tv-cat-header-text">${cat.label}</span>
+        <button class="btn-add-item" onclick="showAddRow('${cat.id}')">＋ 항목 추가</button>
+      </div>
+      <div class="tv-cat-card"><table class="tv-table" id="tbl-${cat.id}">
+        <thead><tr style="background:var(--surface2)">
+        <colgroup>
+          <col style="width:${nameColW}px"><col style="width:130px">
+          ${visYears.map(() => '<col style="width:110px">').join('')}
+          <col>
+        </colgroup>
+        <thead><tr>
+          <th style="padding:7px 14px;font-size:11px;font-weight:500;color:var(--text3);border-bottom:0.5px solid var(--border)">항목</th>
+          <th style="padding:7px 14px;font-size:11px;font-weight:500;color:var(--text3);border-bottom:0.5px solid var(--border)">정상범위</th>
+          ${visYears.map(y => `<th style="padding:7px 14px;font-size:11px;font-weight:500;color:var(--text3);border-bottom:0.5px solid var(--border)">${y}${y === latestY ? ' ★' : ''}</th>`).join('')}
+          <th style="width:100%;border-bottom:0.5px solid var(--border)"></th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+  }
+
+  html += '</div>';
+  document.getElementById('detail').innerHTML = html;
+  activeId = null;
+  renderSidebar();
+}
+
+function renderDetail(id) {
+  const item     = ITEMS.find(i => i.id === id);
+  if (!item) return;
+  const visYears = selectedYears;
+
+  let tableHtml = '';
+  visYears.forEach((y, idx) => {
+    const val = data[y]?.[item.id];
+    const st  = getStatus(item, val);
+    const tagCls   = st==='danger'?'tag-danger':st==='warning'?'tag-warning':st==='normal'?'tag-normal':'tag-none';
+    const tagLabel = st==='danger'?'주의요망':st==='warning'?'경계':st==='normal'?'정상':'데이터없음';
+
+    let dCell = `<span style="color:var(--text3)">—</span>`;
+    if (idx > 0) {
+      const prev = data[visYears[idx-1]]?.[item.id];
+      if (val != null && prev != null) {
+        const d   = +(val - prev).toFixed(2);
+        const cls = d > 0 ? 'd-up' : d < 0 ? 'd-down' : 'd-same';
+        const sym = d > 0 ? '▲' : d < 0 ? '▼' : '';
+        dCell = `<span class="${cls}">${sym}${Math.abs(d)}</span>`;
+      }
+    }
+
+    tableHtml += `<tr>
+      <td><strong>${y}</strong></td>
+      <td class="r">
+        ${val != null
+          ? `<strong>${val}</strong> <span style="color:var(--text3);font-size:11px">${item.unit}</span>`
+          : `<span style="color:var(--text3)">—</span>`}
+      </td>
+      <td class="r">${dCell}</td>
+      <td class="r"><span class="tag ${tagCls}">${tagLabel}</span></td>
+    </tr>`;
+  });
+
+  document.getElementById('detail').innerHTML = `
+    <div class="back-btn" onclick="renderTableView()">&#8592; 목록으로</div>
+    <div class="detail-inner">
+      <div>
+        <div class="detail-title">${item.name}</div>
+        <span class="ref-badge">정상범위 ${fmtRef(item)}</span>
+      </div>
+
+      <div class="card">
+        <table class="list-table">
+          <thead><tr>
+            <th>연도</th><th class="r">측정값</th>
+            <th class="r">전년 대비</th><th class="r">판정</th>
+          </tr></thead>
+          <tbody>${tableHtml}</tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="card-title">연도별 추이</div>
+        <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
+      </div>
+    </div>`;
+
+  // 차트
+  if (chartInst) { chartInst.destroy(); chartInst = null; }
+  const vals        = visYears.map(y => data[y]?.[item.id] ?? null);
+  const pointColors = vals.map(v => {
+    const st = getStatus(item, v);
+    return st==='danger'?'#c43030':st==='warning'?'#a06010':'#1a8a5a';
+  });
+  const allVals  = vals.filter(v => v != null);
+  const refMinD  = item.refMin === 0 ? null : item.refMin;
+  const refMaxD  = item.refMax === 999 ? null : item.refMax;
+  const allNums  = [...allVals, refMinD, refMaxD].filter(v => v != null);
+  if (allNums.length === 0) return;
+  const yMin = Math.max(0, Math.min(...allNums) * 0.88);
+  const yMax = Math.max(...allNums) * 1.1;
+
+  const datasets = [{
+    data: vals,
+    borderColor: '#1a6fd4',
+    backgroundColor: 'rgba(26,111,212,0.06)',
+    pointBackgroundColor: pointColors,
+    pointBorderColor: pointColors,
+    pointRadius: 6, pointHoverRadius: 8,
+    tension: 0.35, fill: true,
+  }];
+
+  if (refMaxD != null) {
+    datasets.push({
+      data: visYears.map(() => refMaxD),
+      borderColor: 'rgba(26,138,90,0.3)', borderDash: [5,4], borderWidth: 1,
+      backgroundColor: 'rgba(26,138,90,0.05)',
+      pointRadius: 0, fill: refMinD != null ? '+1' : 'origin', tension: 0,
+    });
+  }
+  if (refMinD != null) {
+    datasets.push({
+      data: visYears.map(() => refMinD),
+      borderColor: 'rgba(26,138,90,0.3)', borderDash: [5,4], borderWidth: 1,
+      backgroundColor: 'transparent',
+      pointRadius: 0, fill: false, tension: 0,
+    });
+  }
+
+  chartInst = new Chart(document.getElementById('trendChart'), {
+    type: 'line',
+    data: { labels: visYears, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          filter: i => i.datasetIndex === 0,
+          callbacks: { label: ctx => ` ${ctx.parsed.y} ${item.unit}` }
+        }
+      },
+      scales: {
+        y: { min: yMin, max: yMax, grid: { color: 'rgba(128,128,128,0.1)' }, ticks: { font: { size: 11 } } },
+        x: { ticks: { font: { size: 11 } } }
+      }
+    }
+  });
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 8. 로컬 저장 (localStorage)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function saveState() {
+  localStorage.setItem('hct_years', JSON.stringify(years));
+  localStorage.setItem('hct_data',  JSON.stringify(data));
+  localStorage.setItem('hct_items', JSON.stringify(ITEMS));
+  localStorage.setItem('hct_cats',  JSON.stringify(CATEGORIES));
+}
+
+function loadState() {
+  try {
+    const y = localStorage.getItem('hct_years');
+    const d = localStorage.getItem('hct_data');
+    const i = localStorage.getItem('hct_items');
+    const c = localStorage.getItem('hct_cats');
+    if (y) years = JSON.parse(y);
+    if (d) data  = JSON.parse(d);
+    if (i) ITEMS = JSON.parse(i);
+    if (c) {
+      const saved = JSON.parse(c);
+      saved.forEach(sc => { if (!CATEGORIES.find(x => x.id === sc.id)) CATEGORIES.push(sc); });
+    }
+    selectedYears = [...years];
+  } catch(e) { console.warn('loadState 실패:', e); }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 9. 유틸
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function showLoading(msg) {
+  document.getElementById('loadingText').textContent = msg || '처리 중...';
+  document.getElementById('loadingOverlay').style.display = 'flex';
+}
+function setLoadingText(msg) { document.getElementById('loadingText').textContent = msg; }
+function hideLoading()       { document.getElementById('loadingOverlay').style.display = 'none'; }
+
+let toastTimer = null;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeFilePicker();
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 11. Drive 저장 / 불러오기
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// 저장할 데이터 직렬화
+function serializeState() {
+  return JSON.stringify({ years, data, ITEMS, CATEGORIES }, null, 2);
+}
+
+// 데이터 복원
+function deserializeState(json) {
+  const s = JSON.parse(json);
+  if (s.years)      { years = s.years; }
+  if (s.data)       { data  = s.data;  }
+  if (s.ITEMS)      {
+    // 기본 항목 유지 + 커스텀 항목 병합
+    const base = ITEMS.filter(i => !i.id.startsWith('item_') && !i.id.startsWith('manual_'));
+    const custom = (s.ITEMS || []).filter(i => i.id.startsWith('item_') || i.id.startsWith('manual_'));
+    // 저장된 전체 항목 사용 (카테고리 배정 포함)
+    ITEMS = s.ITEMS;
+  }
+  if (s.CATEGORIES) {
+    // 기본 카테고리 유지 + 커스텀 카테고리 병합
+    const savedCustom = s.CATEGORIES.filter(c => c.id.startsWith('custom_') || c.id.startsWith('pdf_'));
+    savedCustom.forEach(sc => { if (!CATEGORIES.find(c => c.id === sc.id)) CATEGORIES.push(sc); });
+    // 순서도 저장된 순서로
+    CATEGORIES.splice(0, CATEGORIES.length, ...s.CATEGORIES);
+  }
+  selectedYears = [...years];
+}
+
+// Drive 루트 폴더 찾기 (없으면 생성)
+async function findOrCreateRootFolder() {
+  const resp = await gapi.client.drive.files.list({
+    q: `name='${DRIVE_ROOT_FOLDER}' and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+    fields: 'files(id)', pageSize: 1,
+  });
+  if (resp.result.files?.length) return resp.result.files[0].id;
+  // 없으면 생성
+  const created = await gapi.client.drive.files.create({
+    resource: { name: DRIVE_ROOT_FOLDER, mimeType: 'application/vnd.google-apps.folder' },
+    fields: 'id',
+  });
+  return created.result.id;
+}
+
+// Drive에 JSON 저장
+async function driveSave() {
+  if (!accessToken) { showToast('Google 로그인이 필요해요'); return; }
+  showLoading('Drive에 저장 중...');
+  try {
+    const rootId  = await findOrCreateRootFolder();
+    const jsonStr = serializeState();
+    const blob    = new Blob([jsonStr], { type: 'application/json' });
+
+    // 기존 파일 검색
+    const existing = await gapi.client.drive.files.list({
+      q: `name='${DRIVE_DATA_FILE}' and '${rootId}' in parents and trashed=false`,
+      fields: 'files(id)', pageSize: 1,
+    });
+
+    if (existing.result.files?.length) {
+      // 기존 파일 업데이트
+      const fileId = existing.result.files[0].id;
+      await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: jsonStr,
+      });
+    } else {
+      // 새 파일 생성 (multipart)
+      const metadata = JSON.stringify({ name: DRIVE_DATA_FILE, parents: [rootId] });
+      const boundary = 'boundary_healthcheckup';
+      const body = `--${boundary}
+Content-Type: application/json
+
+${metadata}
+--${boundary}
+Content-Type: application/json
+
+${jsonStr}
+--${boundary}--`;
+      await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': `multipart/related; boundary=${boundary}`,
+        },
+        body,
+      });
+    }
+    hideLoading();
+    showToast('Drive에 저장됐어요 ✓');
+  } catch(e) {
+    hideLoading();
+    showToast('저장 실패: ' + (e.message || e));
+  }
+}
+
+// Drive에서 JSON 불러오기
+async function driveLoad() {
+  if (!accessToken) { showToast('Google 로그인이 필요해요'); return; }
+  showLoading('Drive에서 불러오는 중...');
+  try {
+    const rootId = await findOrCreateRootFolder();
+    const resp   = await gapi.client.drive.files.list({
+      q: `name='${DRIVE_DATA_FILE}' and '${rootId}' in parents and trashed=false`,
+      fields: 'files(id,name,modifiedTime)', pageSize: 1,
+    });
+
+    if (!resp.result.files?.length) {
+      hideLoading();
+      showToast('저장된 데이터가 없어요. 먼저 저장해주세요.');
+      return;
+    }
+
+    const fileId  = resp.result.files[0].id;
+    const modTime = new Date(resp.result.files[0].modifiedTime).toLocaleString('ko-KR');
+    const fileResp = await fetch(
+      `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+    const json = await fileResp.text();
+    hideLoading();
+
+    if (!confirm(`Drive에서 데이터를 불러올까요?
+저장 시각: ${modTime}
+
+현재 데이터는 덮어씌워집니다.`)) return;
+
+    deserializeState(json);
+    saveState();
+    selectedYears = [...years];
+    activeId = null;
+    renderChips();
+    renderSidebar();
+    renderTableView();
+    showToast('Drive에서 불러왔어요 ✓');
+  } catch(e) {
+    hideLoading();
+    showToast('불러오기 실패: ' + (e.message || e));
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 10. 초기화
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+loadState();
+renderChips();
+renderSidebar();
+renderTableView();
+
+window.onload = () => {
+  if (typeof gapi !== 'undefined') initGapi();
+  if (typeof google !== 'undefined') initGsi();
+};
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('service-worker.js')
+      .then(r => console.log('SW 등록:', r.scope))
+      .catch(e => console.log('SW 실패:', e));
+  });
+}
+</script>
+</body>
+</html>
