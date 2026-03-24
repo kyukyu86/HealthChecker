@@ -14,8 +14,8 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 
 <!-- Google API -->
-<script src="https://apis.google.com/js/api.js"></script>
-<script src="https://accounts.google.com/gsi/client"></script>
+<script src="https://apis.google.com/js/api.js" onload="initGapi()" onerror="console.error('GAPI 로드 실패')"></script>
+<script src="https://accounts.google.com/gsi/client" onload="initGsi()" onerror="console.error('GSI 로드 실패')"></script>
 <!-- Chart.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 
@@ -79,43 +79,45 @@ body {
 /* ── Toolbar ── */
 .toolbar {
   display: flex; align-items: center; gap: 8px;
-  padding: 0 16px; height: 52px;
+  padding: 0 12px; height: 52px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
+  flex-shrink: 0; flex-wrap: nowrap;
 }
-.toolbar-logo { font-size: 14px; font-weight: 600; letter-spacing: -0.3px; margin-right: 4px; }
+.toolbar-logo { font-size: 14px; font-weight: 600; letter-spacing: -0.3px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.toolbar-actions { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
 
 /* ── 터치 기기: hover 없으므로 버튼 항상 표시 ── */
 @media (hover: none) {
-  .cat-del-btn { opacity: 0.5 !important; }
-  .cat-del-btn:active { background: var(--red-bg); color: var(--red); opacity: 1 !important; }
-  .item-del { opacity: 0.4 !important; }
-  .item-del:active { background: var(--red-bg); color: var(--red); opacity: 1 !important; }
+  .cat-del-btn {
+    opacity: 1 !important;
+    width: 20px; height: 20px; font-size: 11px;
+  }
+  .cat-del-btn:active { background: var(--red-bg); color: var(--red); }
+  .item-del {
+    opacity: 1 !important;
+    font-size: 10px; padding: 2px 5px;
+  }
+  .item-del:active { background: var(--red-bg); color: var(--red); }
   .row-actions { opacity: 1 !important; }
-  .ic { opacity: 0.5; }
+  .ic { opacity: 0.7 !important; }
   .ic:active { opacity: 1; background: var(--surface2); }
   .ic-del:active { background: var(--red-bg); color: var(--red); }
-  .chip-del { opacity: 0.6 !important; }
-  .drag-handle { color: var(--text3) !important; }
+  .chip-del { opacity: 0.8 !important; }
+  .drag-handle { color: var(--text3) !important; opacity: 1 !important; }
   .btn-add-item { opacity: 1 !important; }
+  /* 터치 영역 확대 */
+  .cat-del-btn, .item-del, .ic { min-width: 28px; min-height: 28px; }
 }
 
 /* ── 모바일 반응형 ── */
 @media (max-width: 768px) {
-  /* 툴바: 2줄로 */
-  .toolbar {
-    padding: 0 12px; height: auto;
-    flex-wrap: wrap; gap: 0;
-    padding: 8px 12px;
-  }
-  .toolbar-logo { font-size: 13px; flex: 1; }
-  .toolbar-actions {
-    display: flex; align-items: center;
-    gap: 6px; flex-wrap: nowrap;
-  }
-  #loadBtn, #saveBtn { font-size: 11px; padding: 4px 8px; }
-  #addYearBtn { font-size: 11px; padding: 4px 8px; }
+  /* 툴바 */
+  .toolbar { padding: 0 10px; height: 48px; gap: 6px; }
+  .toolbar-logo { font-size: 13px; }
+  .toolbar-actions { gap: 4px; }
+  #loadBtn, #saveBtn, #themeBtn { font-size: 13px; padding: 5px 7px; }
+  #addYearBtn { font-size: 12px; padding: 5px 9px; }
 
   /* 바디: 세로 분할 */
   .body { flex-direction: column; }
@@ -625,7 +627,9 @@ body {
     <button class="btn" onclick="driveLoad()" id="loadBtn" title="Drive에서 데이터 불러오기">↓ 불러오기</button>
     <button class="btn" onclick="driveSave()" id="saveBtn" title="Drive에 데이터 저장">↑ 저장</button>
     <button class="btn btn-primary" onclick="openFilePicker()" id="addYearBtn" style="white-space:nowrap">+ 파일 추가</button>
-    <div id="authArea" style="flex-shrink:0"></div>
+    <div id="authArea" style="flex-shrink:0">
+      <button class="btn-google" id="loginFallbackBtn" onclick="signIn()" style="font-size:12px;padding:6px 10px;">Google 로그인</button>
+    </div>
   </div>
 </div>
 
@@ -879,29 +883,42 @@ let pendingYearData  = {};
 // 2. Google API 초기화
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function initGapi() {
+  if (typeof gapi === 'undefined') { setTimeout(initGapi, 500); return; }
   gapi.load('client', async () => {
-    await gapi.client.init({
-      discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
-    });
-    gapiReady = true;
-    checkReady();
+    try {
+      await gapi.client.init({
+        discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
+      });
+      gapiReady = true;
+      checkReady();
+    } catch(e) {
+      console.error('GAPI init 실패:', e);
+    }
   });
 }
 
 function initGsi() {
+  if (typeof google === 'undefined' || !google.accounts) { setTimeout(initGsi, 500); return; }
   if (CLIENT_ID === 'YOUR_CLIENT_ID_HERE.apps.googleusercontent.com') {
     document.getElementById('setupBanner').style.display = 'flex';
     document.getElementById('authArea').innerHTML =
       `<span style="font-size:11px;color:var(--text3)">CLIENT_ID 미설정</span>`;
     return;
   }
-  tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: CLIENT_ID,
-    scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly',
-    callback: onTokenReceived,
-  });
-  gsiReady = true;
-  checkReady();
+  try {
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT_ID,
+      scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly',
+      callback: onTokenReceived,
+    });
+    gsiReady = true;
+    checkReady();
+  } catch(e) {
+    console.error('GSI init 실패:', e);
+    // 로그인 버튼 직접 표시
+    document.getElementById('authArea').innerHTML =
+      '<button class="btn-google" onclick="initGsi();signIn();" style="font-size:12px;padding:6px 10px;">Google 로그인</button>';
+  }
 }
 
 function checkReady() {
@@ -912,6 +929,9 @@ function checkReady() {
 
 function renderAuthArea() {
   const el = document.getElementById('authArea');
+  // 폴백 버튼 숨기기
+  const fallback = document.getElementById('loginFallbackBtn');
+  if (fallback) fallback.style.display = 'none';
   if (userInfo) {
     const initials = (userInfo.name || userInfo.email || '?').substring(0, 2).toUpperCase();
     el.innerHTML = `
@@ -2455,10 +2475,19 @@ function toggleTheme() {
 }
 
 initTheme();
+// 앱 초기화 (DOM 준비 후)
 loadState();
 renderChips();
 renderSidebar();
 renderTableView();
+
+// Google 버튼 폴백: 5초 후에도 로그인 버튼 없으면 표시
+setTimeout(() => {
+  const el = document.getElementById('authArea');
+  if (el && !el.innerHTML.trim()) {
+    el.innerHTML = '<button class="btn-google" onclick="signIn()" style="font-size:12px;padding:6px 10px;">Google 로그인</button>';
+  }
+}, 3000);
 
 window.onload = () => {
   if (typeof gapi !== 'undefined') initGapi();
