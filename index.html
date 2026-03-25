@@ -1,6 +1,17 @@
 <!DOCTYPE html>
+<!--
+  ╔══════════════════════════════════════════════════╗
+  ║         건강검진 트래커 Health Checker           ║
+  ║  Version : 1.0.0                                 ║
+  ║  Updated : 2026-03-25                            ║
+  ╠══════════════════════════════════════════════════╣
+-->
 <html lang="ko">
 <head>
+<script>
+const CLIENT_ID = '221161654818-0f2jtiajr8qpftngs59pldha2ajn7ih6.apps.googleusercontent.com';
+</script>
+<!-- ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★ -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>건강검진 트래커</title>
@@ -628,13 +639,19 @@ body {
      설정 (Google Cloud Console에서 발급)
      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
 <script>
-  // ★ 여기에 Google Cloud Console에서 발급받은 클라이언트 ID를 붙여넣으세요
-  const CLIENT_ID = '221161654818-0f2jtiajr8qpftngs59pldha2ajn7ih6.apps.googleusercontent.com';
+// ════════════════════════════════════════════════════
+// ★★★ 설정 영역 — 여기만 수정하면 됩니다 ★★★
+// ════════════════════════════════════════════════════
 
-  // ★ Google Drive 폴더 구조: 건강검진 > 추출용 > 2024.pdf
-  const DRIVE_ROOT_FOLDER = '건강검진';   // 최상위 폴더
-  const DRIVE_SUB_FOLDER  = '추출용';     // 하위 폴더 (PDF 보관 위치)
-  const DRIVE_DATA_FILE   = 'checkup-data.json'; // 데이터 저장 파일명
+const APP_VERSION = '1.0.0';                          // 앱 버전
+
+// CLIENT_ID는 파일 최상단 <script> 블록에서 설정하세요
+
+const DRIVE_ROOT_FOLDER = '건강검진';                 // Drive 최상위 폴더
+const DRIVE_SUB_FOLDER  = '추출용';                   // PDF 보관 하위 폴더
+const DRIVE_DATA_FILE   = 'checkup-data.json';        // 데이터 저장 파일명
+
+// ════════════════════════════════════════════════════
 
   // ★ Google Cloud Vision API Key
   // Cloud Console → API 및 서비스 → 사용자 인증 정보 → API 키 만들기
@@ -2634,6 +2651,10 @@ function toggleTheme() {
 
 initTheme();
 // 앱 초기화 (DOM 준비 후)
+// 푸터 버전 업데이트
+const fv = document.getElementById('footerVersion');
+if (fv) fv.textContent = 'v' + APP_VERSION;
+
 loadState();
 renderChips();
 renderSidebar();
@@ -2652,6 +2673,22 @@ window.onload = () => {
   if (typeof google !== 'undefined') initGsi();
 };
 </script>
+<!-- 버전 표시 -->
+
+
+<!-- 하단 푸터 -->
+<div id="appFooter" style="
+  height: 52px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 20px;
+  border-top: 0.5px solid var(--border);
+  background: var(--surface);
+  font-size: 11px; color: var(--text3);
+">
+  <span>건강검진 트래커</span>
+  <span id="footerVersion">v1.0.0</span>
+</div>
+
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
