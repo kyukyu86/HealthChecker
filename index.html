@@ -736,14 +736,18 @@ const DRIVE_DATA_FILE   = 'checkup-data.json';        // 데이터 저장 파일
       </div>
     </div>
 
-    <div style="display:flex;gap:8px;margin-bottom:16px;">
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+      <input type="checkbox" id="im-ref-use" style="width:15px;height:15px;cursor:pointer;accent-color:var(--blue);" onchange="toggleRefInputs()">
+      <label for="im-ref-use" style="font-size:12px;font-weight:500;color:var(--text);cursor:pointer;">정상범위 사용</label>
+    </div>
+    <div id="im-ref-wrap" style="display:none;display:flex;gap:8px;margin-bottom:16px;">
       <div style="flex:1;">
-        <label style="font-size:11px;font-weight:500;color:var(--text2);display:block;margin-bottom:4px;">정상 최솟값</label>
+        <label style="font-size:11px;font-weight:500;color:var(--text2);display:block;margin-bottom:4px;">최솟값</label>
         <input class="search-input" id="im-min" type="text" inputmode="decimal" placeholder="0" style="width:100%;">
       </div>
       <div style="flex:1;">
-        <label style="font-size:11px;font-weight:500;color:var(--text2);display:block;margin-bottom:4px;">정상 최댓값</label>
-        <input class="search-input" id="im-max" type="text" inputmode="decimal" placeholder="999 = 없음" style="width:100%;">
+        <label style="font-size:11px;font-weight:500;color:var(--text2);display:block;margin-bottom:4px;">최댓값</label>
+        <input class="search-input" id="im-max" type="text" inputmode="decimal" placeholder="없음" style="width:100%;">
       </div>
     </div>
 
@@ -1858,10 +1862,13 @@ function openItemModal(catId, itemId) {
 
   document.getElementById('itemModalTitle').textContent = item ? '항목 수정' : '항목 추가';
   document.getElementById('itemModalSub').textContent   = cat ? cat.label + ' 카테고리' : '';
-  document.getElementById('im-name').value = item?.name  || '';
-  document.getElementById('im-unit').value = item?.unit  || '';
-  document.getElementById('im-min').value  = (item && item.refMin !== 0)   ? item.refMin : '';
-  document.getElementById('im-max').value  = (item && item.refMax !== 999) ? item.refMax : '';
+  document.getElementById('im-name').value = item?.name || '';
+  document.getElementById('im-unit').value = item?.unit || '';
+  const hasRef = item ? (item.refMin !== 0 || item.refMax !== 999) : false;
+  document.getElementById('im-ref-use').checked = hasRef;
+  document.getElementById('im-ref-wrap').style.display = hasRef ? 'flex' : 'none';
+  document.getElementById('im-min').value = (item && item.refMin !== 0)   ? item.refMin : '';
+  document.getElementById('im-max').value = (item && item.refMax !== 999) ? item.refMax : '';
 
   // 삭제 버튼 (수정 시만 표시)
   document.getElementById('imDelBtn').style.display = item ? 'inline-flex' : 'none';
@@ -1881,6 +1888,11 @@ function openItemModal(catId, itemId) {
   setTimeout(() => document.getElementById('im-name').focus(), 50);
 }
 
+function toggleRefInputs() {
+  const use  = document.getElementById('im-ref-use').checked;
+  document.getElementById('im-ref-wrap').style.display = use ? 'flex' : 'none';
+}
+
 function closeItemModal() {
   document.getElementById('itemModal').style.display = 'none';
   itemModalCatId = null; itemModalItemId = null;
@@ -1889,9 +1901,11 @@ function closeItemModal() {
 function confirmItemModal() {
   const name = document.getElementById('im-name').value.trim();
   if (!name) { showToast('항목명을 입력하세요'); return; }
-  const unit   = document.getElementById('im-unit').value.trim();
-  const refMin = parseFloat(document.getElementById('im-min').value) || 0;
-  const refMax = parseFloat(document.getElementById('im-max').value) || 999;
+  const unit    = document.getElementById('im-unit').value.trim();
+  const useRef  = document.getElementById('im-ref-use').checked;
+  const refMin  = useRef ? (parseFloat(document.getElementById('im-min').value) || 0)   : 0;
+  const refMax  = useRef ? (parseFloat(document.getElementById('im-max').value) || 999) : 999;
+  const showRef = useRef;
 
   if (itemModalItemId) {
     // 수정
@@ -1899,12 +1913,13 @@ function confirmItemModal() {
     if (item) {
       item.name = name; item.unit = unit;
       item.refMin = refMin; item.refMax = refMax;
+      item.showRef = showRef;
     }
   } else {
     // 추가
     const norm  = s => s.toLowerCase().replace(/[\s\-_()]/g,'');
     const newId = 'manual_' + norm(name).substring(0,10) + '_' + Date.now().toString(36);
-    ITEMS.push({ id: newId, cat: itemModalCatId, name, unit, refMin, refMax });
+    ITEMS.push({ id: newId, cat: itemModalCatId, name, unit, refMin, refMax, showRef });
     itemModalItemId = newId;
   }
 
@@ -2024,8 +2039,10 @@ function getStatus(item, val) {
 }
 
 function fmtRef(item) {
+  if (item.showRef === false) return '';
+  if (item.refMin === 0 && item.refMax === 999) return '';
   if (item.refMin === 0)   return `< ${item.refMax} ${item.unit}`;
-  if (item.refMax === 999) return `— ${item.unit}`;
+  if (item.refMax === 999) return `> ${item.refMin} ${item.unit}`;
   return `${item.refMin}–${item.refMax} ${item.unit}`;
 }
 
@@ -2336,7 +2353,7 @@ function renderTableView() {
     const refStr = fmtRef(i);
     return Math.max(mx, measureText(i.name) + (refStr ? measureText(refStr) + 12 : 0));
   }, 80);
-  const nameColW = Math.round(maxNameW) + 16; // 여백 포함
+  const nameColW = Math.round(maxNameW) - 4; // 여백 포함 -20px
   document.documentElement.style.setProperty('--tv-name-w', nameColW + 'px');
 
   // 연도 헤더
@@ -2429,15 +2446,16 @@ function renderDetail(id) {
   const visYears = selectedYears;
 
   let tableHtml = '';
-  visYears.forEach((y, idx) => {
+  [...visYears].reverse().forEach((y, idx, arr) => {
+  const idx2 = visYears.indexOf(y);
     const val = data[y]?.[item.id];
     const st  = getStatus(item, val);
     const tagCls   = st==='danger'?'tag-danger':st==='warning'?'tag-warning':st==='normal'?'tag-normal':'tag-none';
     const tagLabel = st==='danger'?'주의요망':st==='warning'?'경계':st==='normal'?'정상':'데이터없음';
 
     let dCell = `<span style="color:var(--text3)">—</span>`;
-    if (idx > 0) {
-      const prev = data[visYears[idx-1]]?.[item.id];
+    if (idx2 > 0) {
+      const prev = data[visYears[idx2-1]]?.[item.id];
       if (val != null && prev != null) {
         const d   = +(val - prev).toFixed(2);
         const cls = d > 0 ? 'd-up' : d < 0 ? 'd-down' : 'd-same';
@@ -2529,6 +2547,28 @@ function renderDetail(id) {
     });
   }
 
+  const pointLabelPlugin = {
+    id: 'pointLabel',
+    afterDatasetsDraw(chart) {
+      const ctx2 = chart.ctx;
+      chart.data.datasets.forEach((ds, di) => {
+        if (di !== 0) return; // 실제 데이터 라인만
+        const meta = chart.getDatasetMeta(di);
+        meta.data.forEach((pt, i) => {
+          const val = ds.data[i];
+          if (val == null) return;
+          ctx2.save();
+          ctx2.font = '500 11px -apple-system, sans-serif';
+          ctx2.fillStyle = ds.borderColor;
+          ctx2.textAlign = 'center';
+          ctx2.textBaseline = 'bottom';
+          ctx2.fillText(val, pt.x, pt.y - 6);
+          ctx2.restore();
+        });
+      });
+    }
+  };
+
   chartInst = new Chart(document.getElementById('trendChart'), {
     type: 'line',
     data: { labels: visYears, datasets },
@@ -2544,8 +2584,10 @@ function renderDetail(id) {
       scales: {
         y: { min: yMin, max: yMax, grid: { color: 'rgba(128,128,128,0.1)' }, ticks: { font: { size: 11 } } },
         x: { ticks: { font: { size: 11 } } }
-      }
-    }
+      },
+      layout: { padding: { top: 20 } }
+    },
+    plugins: [pointLabelPlugin]
   });
 }
 
