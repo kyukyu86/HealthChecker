@@ -1587,9 +1587,18 @@ async function openFilePicker() {
     return;
   }
 
+  // GAPI 미준비
+  if (!gapiReady || !gapi?.client?.drive) {
+    listEl.innerHTML = `<div class="file-list-empty">Google API 초기화 중입니다. 잠시 후 다시 시도해주세요.</div>`;
+    return;
+  }
+
   listEl.innerHTML = `<div class="file-list-loading"><div class="mini-spinner"></div> Drive에서 파일 목록 불러오는 중...</div>`;
 
   try {
+    // 토큰 재설정
+    gapi.client.setToken({ access_token: accessToken });
+
     const extractId = await findExtractFolderId();
     const resp = await gapi.client.drive.files.list({
       q: `'${extractId}' in parents and mimeType='application/pdf' and trashed=false`,
@@ -1597,7 +1606,7 @@ async function openFilePicker() {
       orderBy: 'name desc',
       pageSize: 50,
     });
-    pickerFiles = resp.result.files || [];
+    pickerFiles = resp.result?.files || [];
 
     if (pickerFiles.length === 0) {
       listEl.innerHTML = `<div class="file-list-empty">"${DRIVE_SUB_FOLDER}" 폴더에 PDF가 없습니다</div>`;
@@ -1875,7 +1884,7 @@ function openItemModal(catId, itemId) {
 
   // 연도별 입력칸
   const yearsDiv = document.getElementById('im-years');
-  yearsDiv.innerHTML = years.map(y => {
+  yearsDiv.innerHTML = [...years].reverse().map(y => {
     const v = item ? (data[y]?.[itemId] ?? '') : '';
     return `<div style="display:flex;align-items:center;gap:10px;">
       <span style="font-size:12px;font-weight:500;width:44px;flex-shrink:0;">${y}</span>
