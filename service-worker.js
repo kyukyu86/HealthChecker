@@ -1,4 +1,4 @@
-const CACHE_NAME = 'health-checkup-v1';
+const CACHE_NAME = 'health-checkup-v3';
 const ASSETS = [
   '/HealthChecker/',
   '/HealthChecker/index.html',
@@ -42,6 +42,6 @@ self.addEventListener('fetch', e => {
         caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
         return response;
       });
-    }).catch(() => caches.match('/HealthChecker/index.html'))
+    }).catch(() => caches.match('/health-checkup/index.html'))
   );
 });
