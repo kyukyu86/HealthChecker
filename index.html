@@ -282,7 +282,7 @@ body {
 .dot-none    { background: var(--border2); }
 
 /* ── Detail Panel ── */
-.detail { flex: 1; overflow-y: auto; overflow-x: scroll; background: var(--bg); }
+.detail { flex: 1; overflow-y: auto; overflow-x: auto; background: var(--bg); }
 .detail::-webkit-scrollbar { width: 4px; height: 4px; }
 .detail::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
 
@@ -372,7 +372,7 @@ body {
   line-height: 1;
 }
 .btn-nr-cl:hover { background: var(--red-bg); color: var(--red); border-color: var(--red); }
-.tv-cat { margin-bottom: 20px; padding-top: 4px; min-width: 100%; }
+.tv-cat { margin-bottom: 20px; padding-top: 4px; }
 .tv-cat-card { background: var(--surface); }
 .tv-cat-header {
   display: flex; align-items: center; gap: 0;
@@ -605,7 +605,7 @@ body {
      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
 <script>
   // ★ 여기에 Google Cloud Console에서 발급받은 클라이언트 ID를 붙여넣으세요
-  const CLIENT_ID = '221161654818-0f2jtiajr8qpftngs59pldha2ajn7ih6.apps.googleusercontent.com';
+  const CLIENT_ID = 'YOUR_CLIENT_ID_HERE.apps.googleusercontent.com';
 
   // ★ Google Drive 폴더 구조: 건강검진 > 추출용 > 2024.pdf
   const DRIVE_ROOT_FOLDER = '건강검진';   // 최상위 폴더
@@ -923,7 +923,34 @@ function initGsi() {
 
 function checkReady() {
   if (gapiReady && gsiReady) {
-    renderAuthArea();
+    // 저장된 토큰 복원 시도
+    const savedToken   = localStorage.getItem('gToken');
+    const savedExp     = localStorage.getItem('gTokenExp');
+    const savedUser    = localStorage.getItem('gUserInfo');
+    const isValid      = savedToken && savedExp && Date.now() < parseInt(savedExp);
+
+    if (isValid) {
+      accessToken = savedToken;
+      userInfo    = savedUser ? JSON.parse(savedUser) : null;
+      gapi.client.setToken({ access_token: accessToken });
+      renderAuthArea();
+      // 토큰 만료 10분 전에 자동 갱신
+      const remaining = parseInt(savedExp) - Date.now();
+      const refreshIn = Math.max(remaining - 10 * 60 * 1000, 0);
+      setTimeout(() => {
+        tokenClient.requestAccessToken({ prompt: '' });
+      }, refreshIn);
+    } else {
+      // 만료됐으면 조용히 재발급 시도 (prompt 없이)
+      localStorage.removeItem('gToken');
+      localStorage.removeItem('gTokenExp');
+      localStorage.removeItem('gUserInfo');
+      if (savedUser) {
+        // userInfo는 있었으니 자동 재로그인 시도
+        try { tokenClient.requestAccessToken({ prompt: '' }); } catch(e) {}
+      }
+      renderAuthArea();
+    }
   }
 }
 
@@ -976,6 +1003,9 @@ function signOut() {
   if (accessToken) google.accounts.oauth2.revoke(accessToken, () => {});
   accessToken = null;
   userInfo    = null;
+  localStorage.removeItem('gToken');
+  localStorage.removeItem('gTokenExp');
+  localStorage.removeItem('gUserInfo');
   renderAuthArea();
   showToast('로그아웃됐습니다');
 }
@@ -992,6 +1022,12 @@ async function onTokenReceived(resp) {
     });
     userInfo = await r.json();
   } catch(e) { userInfo = { name: '사용자', email: '' }; }
+
+  // 토큰 + 만료시간 + userInfo 저장 (expires_in: 보통 3600초)
+  const expiresAt = Date.now() + (resp.expires_in || 3600) * 1000;
+  localStorage.setItem('gToken', accessToken);
+  localStorage.setItem('gTokenExp', expiresAt);
+  localStorage.setItem('gUserInfo', JSON.stringify(userInfo));
 
   renderAuthArea();
   showToast(`${userInfo.name || userInfo.email}으로 로그인됐습니다`);
@@ -2059,7 +2095,7 @@ function renderTableView() {
     return w;
   }
   const maxNameW = ITEMS.reduce((mx, i) => Math.max(mx, measureText(i.name)), 80);
-  const nameColW = Math.round(maxNameW * 0.6) + 12; // 항목-정상범위 간격 축소
+  const nameColW = Math.round(maxNameW * 1.1) + 24; // 110% + padding
   const refOffset = Math.round(nameColW / 2); // 정상범위 간격 조정용
   document.documentElement.style.setProperty('--tv-name-w', nameColW + 'px');
 
@@ -2067,7 +2103,7 @@ function renderTableView() {
   const yearHeaders = visYears.map(y =>
     `<th>${y}${y === latestY ? ' ★' : ''}</th>`).join('');
 
-  let html = '<div class="table-view" style="min-width:max-content;">';
+  let html = '<div class="table-view">';
 
   for (const cat of CATEGORIES) {
     const kw = searchKeyword.toLowerCase();
