@@ -392,7 +392,7 @@ body {
 }
 .tv-table {
   border-collapse: collapse; table-layout: fixed;
-  background: var(--surface); min-width: 100%;
+  background: var(--surface);
 }
 .tv-table-wrap {
   width: 100%; border-collapse: collapse; table-layout: auto;
@@ -409,14 +409,11 @@ body {
   padding: 8px 14px; font-size: 12px; border-bottom: 1px solid var(--border);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.tv-col-name { position: sticky; left: 0; z-index: 2; background: inherit; }
-.tv-col-ref  { position: sticky; left: var(--tv-name-w, 160px); z-index: 2; background: inherit; box-shadow: 2px 0 3px rgba(0,0,0,0.05); }
-.tv-table thead .tv-col-name,
-.tv-table thead .tv-col-ref  { background: var(--surface2); }
-.tv-table tbody tr .tv-col-name,
-.tv-table tbody tr .tv-col-ref  { background: var(--surface); }
-.tv-table tbody tr:hover .tv-col-name,
-.tv-table tbody tr:hover .tv-col-ref  { background: var(--surface2); }
+.tv-col-name { position: sticky; left: 0; z-index: 2; background: inherit;
+  width: var(--tv-name-w, 160px); min-width: var(--tv-name-w, 160px); max-width: var(--tv-name-w, 160px); }
+.tv-table thead .tv-col-name { background: var(--surface2); }
+.tv-table tbody tr .tv-col-name { background: var(--surface); }
+.tv-table tbody tr:hover .tv-col-name { background: var(--surface2); }
 .tv-table tr:last-child td { border-bottom: none; }
 .tv-table thead tr { cursor: default; }
 .tv-table tbody tr { cursor: pointer; transition: background 0.1s; }
@@ -2331,11 +2328,15 @@ function renderTableView() {
   // 한글 1자 ≈ 14px, 영문/숫자 1자 ≈ 8px 기준
   function measureText(str) {
     let w = 0;
-    for (const ch of str) { w += /[가-힣]/.test(ch) ? 14 : 8; }
+    for (const ch of str) { w += /[가-힣]/.test(ch) ? 13 : 7; }
     return w;
   }
-  const maxNameW = ITEMS.reduce((mx, i) => Math.max(mx, measureText(i.name)), 80);
-  const nameColW = Math.round(maxNameW * 1.1) - 36; // 110% + padding - 60px
+  // 항목명 + 정상범위 텍스트 합산 길이로 계산
+  const maxNameW = ITEMS.reduce((mx, i) => {
+    const refStr = fmtRef(i);
+    return Math.max(mx, measureText(i.name) + (refStr ? measureText(refStr) + 12 : 0));
+  }, 80);
+  const nameColW = Math.round(maxNameW) + 16; // 여백 포함
   document.documentElement.style.setProperty('--tv-name-w', nameColW + 'px');
 
   // 연도 헤더
@@ -2343,7 +2344,7 @@ function renderTableView() {
     `<th>${y}${y === latestY ? ' ★' : ''}</th>`).join('');
 
   // 테이블 전체 너비 계산 (항목 + 정상범위 + 연도들 + filler 최소)
-  const tableMinW = nameColW + 130 + visYears.length * 110 + 20;
+  const tableMinW = nameColW + visYears.length * 110 + 20;
 
   let html = '<div class="table-view">';
 
@@ -2382,8 +2383,7 @@ function renderTableView() {
 
       const isManual = item.id.startsWith('item_') || item.id.startsWith('manual_');
       rows += `<tr onclick="selectItem('${item.id}')">
-        <td class="tv-col-name">${item.name}${isManual ? '<span class="tag-m">수동</span>' : ''}</td>
-        <td class="tv-col-ref" style="color:var(--text3);font-size:11px;padding-left:14px;">${fmtRef(item)}</td>
+        <td class="tv-col-name">${item.name}${isManual ? '<span class="tag-m">수동</span>' : ''}<span style="color:var(--text3);font-size:11px;margin-left:6px;">${fmtRef(item)}</span></td>
         ${cells}
         <td style="width:100%"></td>
       </tr>`;
@@ -2395,17 +2395,15 @@ function renderTableView() {
         <span class="tv-cat-header-text">${cat.label}</span>
         <button class="btn-add-item" onclick="showAddRow('${cat.id}')" title="항목 추가">＋</button>
       </div>
-      <div class="tv-cat-card"><table class="tv-table" id="tbl-${cat.id}">
+      <div class="tv-cat-card"><table class="tv-table" style="width:${tableMinW}px;min-width:100%;" id="tbl-${cat.id}">
         <thead><tr style="background:var(--surface2)">
         <colgroup>
-          <col style="width:${nameColW}px;min-width:${nameColW}px;">
-          <col style="width:130px;min-width:130px;">
+          <col style="width:${nameColW}px;min-width:${nameColW}px;max-width:${nameColW}px;">
           ${visYears.map(() => '<col style="width:110px;min-width:110px;">').join('')}
-          <col style="min-width:20px;">
+          <col>
         </colgroup>
         <thead><tr>
           <th class="tv-col-name" style="padding:7px 14px;font-size:11px;font-weight:500;color:var(--text3);border-bottom:0.5px solid var(--border)">항목</th>
-          <th class="tv-col-ref" style="padding:7px 0 7px 14px;font-size:11px;font-weight:500;color:var(--text3);border-bottom:0.5px solid var(--border)">정상범위</th>
           ${visYears.map(y => `<th style="padding:7px 14px;font-size:11px;font-weight:500;color:var(--text3);border-bottom:0.5px solid var(--border)">${y}${y === latestY ? ' ★' : ''}</th>`).join('')}
           <th style="width:100%;border-bottom:0.5px solid var(--border)"></th>
         </tr></thead>
