@@ -496,6 +496,30 @@ body {
 .loading-text { color: white; font-size: 13px; }
 
 /* ── Toast ── */
+/* 설정 팝업 */
+.settings-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: transparent;
+}
+.settings-popup {
+  position: fixed; top: 52px; right: 12px; z-index: 1001;
+  background: var(--surface); border: 0.5px solid var(--border2);
+  border-radius: var(--radius-lg); box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+  min-width: 200px; overflow: hidden;
+}
+.settings-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px; font-size: 13px; color: var(--text);
+  cursor: pointer; transition: background 0.1s; border: none;
+  background: none; width: 100%; text-align: left; font-family: inherit;
+}
+.settings-item:hover { background: var(--surface2); }
+.settings-item:active { background: var(--border); }
+.settings-item + .settings-item { border-top: 0.5px solid var(--border); }
+.settings-item-icon { font-size: 16px; width: 20px; text-align: center; flex-shrink: 0; }
+.settings-item-danger { color: var(--red); }
+.settings-item-danger:hover { background: var(--red-bg); }
+
 .toast {
   position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
   background: var(--text); color: var(--surface);
@@ -671,6 +695,34 @@ body {
 
 <!-- Toast -->
 <div class="toast" id="toast"></div>
+
+<!-- 설정 팝업 -->
+<div class="settings-overlay" id="settingsOverlay" style="display:none" onclick="closeSettings()"></div>
+<div class="settings-popup" id="settingsPopup" style="display:none">
+  <button class="settings-item" onclick="settingsClearCache()">
+    <span class="settings-item-icon">🔄</span>
+    <div>
+      <div>캐시 초기화</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:1px">앱 업데이트 시 사용</div>
+    </div>
+  </button>
+  <button class="settings-item" onclick="settingsToggleTheme()">
+    <span class="settings-item-icon" id="settingsThemeIcon">🌙</span>
+    <div>다크 / 라이트 모드</div>
+  </button>
+  <button class="settings-item" onclick="settingsDriveSave()">
+    <span class="settings-item-icon">☁️</span>
+    <div>Drive에 저장</div>
+  </button>
+  <button class="settings-item" onclick="settingsDriveLoad()">
+    <span class="settings-item-icon">📥</span>
+    <div>Drive에서 불러오기</div>
+  </button>
+  <button class="settings-item settings-item-danger" onclick="settingsSignOut()">
+    <span class="settings-item-icon">🚪</span>
+    <div>Google 로그아웃</div>
+  </button>
+</div>
 
 <!-- File Picker Modal -->
 <div class="modal-bg" id="filePickerModal" style="display:none">
@@ -2498,6 +2550,59 @@ async function driveLoad() {
     hideLoading();
     showToast('불러오기 실패: ' + (e.message || e));
   }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 12. 설정 팝업
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function openSettings() {
+  const popup   = document.getElementById('settingsPopup');
+  const overlay = document.getElementById('settingsOverlay');
+  const icon    = document.getElementById('settingsThemeIcon');
+  const isDark  = document.documentElement.getAttribute('data-theme') === 'dark';
+  if (icon) icon.textContent = isDark ? '☀️' : '🌙';
+  popup.style.display   = 'block';
+  overlay.style.display = 'block';
+}
+
+function closeSettings() {
+  document.getElementById('settingsPopup').style.display   = 'none';
+  document.getElementById('settingsOverlay').style.display = 'none';
+}
+
+function settingsClearCache() {
+  closeSettings();
+  if (!('caches' in window)) {
+    showToast('이 브라우저는 캐시를 지원하지 않아요');
+    return;
+  }
+  if (!confirm('캐시를 초기화하고 페이지를 새로고침할까요?')) return;
+  caches.keys().then(keys => {
+    Promise.all(keys.map(k => caches.delete(k))).then(() => {
+      showToast('캐시가 초기화됐어요. 새로고침합니다...');
+      setTimeout(() => location.reload(true), 1000);
+    });
+  });
+}
+
+function settingsToggleTheme() {
+  closeSettings();
+  toggleTheme();
+}
+
+function settingsDriveSave() {
+  closeSettings();
+  driveSave();
+}
+
+function settingsDriveLoad() {
+  closeSettings();
+  driveLoad();
+}
+
+function settingsSignOut() {
+  closeSettings();
+  signOut();
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
