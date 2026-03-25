@@ -5,9 +5,13 @@
   ║  Version : 1.0.0                                 ║
   ║  Updated : 2026-03-25                            ║
   ╠══════════════════════════════════════════════════╣
+  ║  ★ CLIENT_ID 설정 (아래 <script> 블록 상단)     ║
+  ║  const CLIENT_ID = 'YOUR_ID.apps.google...';     ║
+  ╚══════════════════════════════════════════════════╝
 -->
 <html lang="ko">
 <head>
+<!-- ★★★ CLIENT_ID 설정 — 여기에 붙여넣으세요 ★★★ -->
 <script>
 const CLIENT_ID = '221161654818-0f2jtiajr8qpftngs59pldha2ajn7ih6.apps.googleusercontent.com';
 </script>
@@ -97,6 +101,7 @@ body {
 }
 .toolbar-logo { font-size: 14px; font-weight: 600; letter-spacing: -0.3px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .toolbar-actions { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
+#settingsBtn { font-size: 16px; padding: 4px 8px; line-height: 1; }
 
 /* ── 터치 기기: hover 없으므로 버튼 항상 표시 ── */
 @media (hover: none) {
@@ -127,7 +132,7 @@ body {
   .toolbar { padding: 0 10px; height: 48px; gap: 6px; }
   .toolbar-logo { font-size: 13px; }
   .toolbar-actions { gap: 4px; }
-  #loadBtn, #saveBtn, #themeBtn { font-size: 13px; padding: 5px 7px; }
+  #loadBtn, #saveBtn { font-size: 13px; padding: 5px 7px; }
   #addYearBtn { font-size: 12px; padding: 5px 9px; }
 
   /* 바디: 세로 분할 */
@@ -665,12 +670,11 @@ const DRIVE_DATA_FILE   = 'checkup-data.json';        // 데이터 저장 파일
   <span class="toolbar-logo">🩺 건강검진 트래커</span>
   <div class="ml-auto"></div>
   <div class="toolbar-actions">
-    <button class="btn" onclick="driveLoad()" id="loadBtn" title="Drive에서 데이터 불러오기">↓ 불러오기</button>
-    <button class="btn" onclick="driveSave()" id="saveBtn" title="Drive에 데이터 저장">↑ 저장</button>
-    <button class="btn btn-primary" onclick="openFilePicker()" id="addYearBtn" style="white-space:nowrap">+ 파일 추가</button>
     <div id="authArea" style="flex-shrink:0">
       <button class="btn-google" id="loginFallbackBtn" onclick="if(!tokenClient){initGapi();initGsi();}setTimeout(signIn,500);" style="font-size:12px;padding:6px 10px;">Google 로그인</button>
     </div>
+    <button class="btn btn-primary" onclick="openFilePicker()" id="addYearBtn" style="white-space:nowrap">+ 추가</button>
+    <button class="btn" onclick="openSettings()" id="settingsBtn" title="설정" style="padding:5px 9px;font-size:14px;">&#9881;</button>
   </div>
 </div>
 
@@ -2630,13 +2634,13 @@ function initTheme() {
   const saved = localStorage.getItem('theme');
   if (saved) {
     document.documentElement.setAttribute('data-theme', saved);
-    document.getElementById('themeBtn').textContent = saved === 'dark' ? '☀️' : '🌙';
+
   } else {
     // 시스템 다크모드 감지
     const sysDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     if (sysDark) {
       document.documentElement.setAttribute('data-theme', 'dark');
-      document.getElementById('themeBtn').textContent = '☀️';
+
     }
   }
 }
@@ -2646,7 +2650,7 @@ function toggleTheme() {
   const next = cur === 'dark' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', next);
   localStorage.setItem('theme', next);
-  document.getElementById('themeBtn').textContent = next === 'dark' ? '☀️' : '🌙';
+
 }
 
 initTheme();
