@@ -13,7 +13,7 @@
 <head>
 <!-- ★★★ CLIENT_ID 설정 — 여기에 붙여넣으세요 ★★★ -->
 <script>
-const CLIENT_ID = '221161654818-0f2jtiajr8qpftngs59pldha2ajn7ih6.apps.googleusercontent.com';
+  const CLIENT_ID = '221161654818-0f2jtiajr8qpftngs59pldha2ajn7ih6.apps.googleusercontent.com';
 </script>
 <!-- ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★ -->
 <meta charset="UTF-8">
@@ -105,25 +105,12 @@ body {
 
 /* ── 터치 기기: hover 없으므로 버튼 항상 표시 ── */
 @media (hover: none) {
-  .cat-del-btn {
-    opacity: 1 !important;
-    width: 20px; height: 20px; font-size: 11px;
-  }
-  .cat-del-btn:active { background: var(--red-bg); color: var(--red); }
-  .item-del {
-    opacity: 1 !important;
-    font-size: 10px; padding: 2px 5px;
-  }
-  .item-del:active { background: var(--red-bg); color: var(--red); }
+  .cat-del-btn { opacity: 1 !important; }
+  .item-del { opacity: 1 !important; }
   .row-actions { opacity: 1 !important; }
-  .ic { opacity: 0.7 !important; }
-  .ic:active { opacity: 1; background: var(--surface2); }
-  .ic-del:active { background: var(--red-bg); color: var(--red); }
-  .chip-del { opacity: 0.8 !important; }
-  .drag-handle { color: var(--text3) !important; opacity: 1 !important; }
-  .btn-add-item { opacity: 1 !important; }
-  /* 터치 영역 확대 */
-  .cat-del-btn, .item-del, .ic { min-width: 28px; min-height: 28px; }
+  .ic { opacity: 0.8 !important; }
+  .chip-del { opacity: 1 !important; }
+  .drag-handle { opacity: 1 !important; color: var(--text3) !important; }
 }
 
 /* ── 모바일 반응형 ── */
@@ -257,15 +244,15 @@ body {
 .cat-header:hover .cat-del { opacity: 1; }
 .cat-del:hover { background: var(--red-bg); color: var(--red); opacity: 1 !important; }
 .cat-del-btn {
-  flex-shrink: 0; width: 16px; height: 16px; border-radius: 50%;
+  flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%;
   border: none; background: transparent; cursor: pointer;
-  font-size: 10px; color: var(--text3);
+  font-size: 11px; color: var(--text3);
   display: flex; align-items: center; justify-content: center;
-  opacity: 0; transition: opacity 0.15s, background 0.15s;
+  opacity: 0.45; transition: opacity 0.15s, background 0.15s;
   padding: 0;
 }
 .cat-header:hover .cat-del-btn { opacity: 1; }
-.cat-del-btn:hover { background: var(--red-bg); color: var(--red); }
+.cat-del-btn:hover, .cat-del-btn:active { background: var(--red-bg); color: var(--red); opacity: 1; }
 .item-btn {
   display: flex; align-items: center;
   padding: 6px 10px 6px 18px;
@@ -329,15 +316,16 @@ body {
 .search-input:focus { outline: none; border-color: var(--blue); }
 
 /* 전체 항목 테이블 뷰 */
-.table-view { padding: 20px 24px; }
+.table-view { padding: 20px 24px; display: inline-block; min-width: 100%; }
 
 /* 수동 항목 뱃지 */
 .tag-m { font-size: 9px; padding: 1px 5px; border-radius: 8px;
   background: var(--amber-bg); color: var(--amber); margin-left: 5px; vertical-align: middle; }
 
 /* 행 액션 아이콘 */
-.row-actions { display: inline-flex; gap: 2px; margin-left: 4px; opacity: 0; transition: opacity 0.1s; }
+.row-actions { display: inline-flex; gap: 2px; margin-left: 4px; opacity: 0.5; transition: opacity 0.1s; }
 .tv-table tbody tr:hover .row-actions { opacity: 1; }
+.tv-table tbody tr .row-actions:active { opacity: 1; }
 .ic { font-size: 10px; padding: 2px 5px; border-radius: 4px; cursor: pointer;
   color: var(--text3); border: none; background: none; }
 .ic:hover { background: var(--surface2); color: var(--text); }
@@ -409,7 +397,7 @@ body {
   overflow: hidden;
 }
 .tv-table {
-  width: 100%; border-collapse: collapse; table-layout: fixed;
+  border-collapse: collapse; table-layout: fixed;
   background: var(--surface);
 }
 .tv-table-wrap {
@@ -690,7 +678,7 @@ const DRIVE_DATA_FILE   = 'checkup-data.json';        // 데이터 저장 파일
       <button class="btn" style="width:100%;font-size:12px;" onclick="addCategory()">+ 카테고리 추가</button>
     </div>
   </div>
-  <div style="flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden;">
+  <div style="flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden;position:relative;">
     <div class="detail-topbar">
       <div class="year-chips" id="yearChips"></div>
       <div class="search-wrap">
@@ -2176,6 +2164,9 @@ function renderTableView() {
   const yearHeaders = visYears.map(y =>
     `<th>${y}${y === latestY ? ' ★' : ''}</th>`).join('');
 
+  // 테이블 전체 너비 계산 (항목 + 정상범위 + 연도들 + filler 최소)
+  const tableMinW = nameColW + 130 + visYears.length * 110 + 20;
+
   let html = '<div class="table-view">';
 
   for (const cat of CATEGORIES) {
@@ -2228,13 +2219,13 @@ function renderTableView() {
       </tr>`;
     }
 
-    html += `<div class="tv-cat">
+    html += `<div class="tv-cat" style="min-width:${tableMinW}px;">
       <div class="tv-cat-header">
         <div class="tv-cat-header-bar"></div>
         <span class="tv-cat-header-text">${cat.label}</span>
         <button class="btn-add-item" onclick="showAddRow('${cat.id}')">＋ 항목 추가</button>
       </div>
-      <div class="tv-cat-card"><table class="tv-table" id="tbl-${cat.id}">
+      <div class="tv-cat-card" style="min-width:${tableMinW}px;"><table class="tv-table" style="width:${tableMinW}px;" id="tbl-${cat.id}">
         <thead><tr style="background:var(--surface2)">
         <colgroup>
           <col style="width:${nameColW}px"><col style="width:130px">
