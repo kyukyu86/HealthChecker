@@ -107,7 +107,6 @@ body {
 @media (hover: none) {
   .cat-del-btn { opacity: 1 !important; }
   .item-del { opacity: 1 !important; }
-  .row-actions { opacity: 1 !important; }
   .ic { opacity: 0.8 !important; }
   .chip-del { opacity: 1 !important; }
   .drag-handle { opacity: 1 !important; color: var(--text3) !important; }
@@ -235,14 +234,6 @@ body {
 .cat-header:first-child { border-top: none; }
 .cat-arrow { font-size: 9px; transition: transform 0.2s; margin-left: 4px; color: var(--text3); }
 .cat-header.closed .cat-arrow { transform: rotate(-90deg); }
-.cat-del {
-  margin-left: auto; width: 16px; height: 16px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 10px; opacity: 0; transition: opacity 0.15s, background 0.15s;
-  color: var(--text3); flex-shrink: 0;
-}
-.cat-header:hover .cat-del { opacity: 1; }
-.cat-del:hover { background: var(--red-bg); color: var(--red); opacity: 1 !important; }
 .cat-del-btn {
   flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%;
   border: none; background: transparent; cursor: pointer;
@@ -251,8 +242,8 @@ body {
   opacity: 0.45; transition: opacity 0.15s, background 0.15s;
   padding: 0;
 }
-.cat-header:hover .cat-del-btn { opacity: 1; }
 .cat-del-btn:hover, .cat-del-btn:active { background: var(--red-bg); color: var(--red); opacity: 1; }
+
 .item-btn {
   display: flex; align-items: center;
   padding: 6px 10px 6px 18px;
@@ -285,7 +276,7 @@ body {
 .dot-none    { background: var(--border2); }
 
 /* ── Detail Panel ── */
-.detail { flex: 1; overflow-y: auto; overflow-x: auto; background: var(--bg); }
+.detail { flex: 1; overflow-y: auto; overflow-x: hidden; background: var(--bg); }
 .detail::-webkit-scrollbar { width: 4px; height: 4px; }
 .detail::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
 
@@ -316,16 +307,14 @@ body {
 .search-input:focus { outline: none; border-color: var(--blue); }
 
 /* 전체 항목 테이블 뷰 */
-.table-view { padding: 20px 24px; display: inline-block; min-width: 100%; }
+.table-view { padding: 20px 24px; }
 
 /* 수동 항목 뱃지 */
 .tag-m { font-size: 9px; padding: 1px 5px; border-radius: 8px;
   background: var(--amber-bg); color: var(--amber); margin-left: 5px; vertical-align: middle; }
 
 /* 행 액션 아이콘 */
-.row-actions { display: inline-flex; gap: 2px; margin-left: 4px; opacity: 0.5; transition: opacity 0.1s; }
-.tv-table tbody tr:hover .row-actions { opacity: 1; }
-.tv-table tbody tr .row-actions:active { opacity: 1; }
+
 .ic { font-size: 10px; padding: 2px 5px; border-radius: 4px; cursor: pointer;
   color: var(--text3); border: none; background: none; }
 .ic:hover { background: var(--surface2); color: var(--text); }
@@ -333,13 +322,15 @@ body {
 
 /* 카테고리 + 항목 추가 버튼 */
 .btn-add-item {
-  display: flex; align-items: center; gap: 4px;
-  padding: 3px 9px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 50%;
   border: 0.5px solid var(--border2);
-  background: transparent; font-size: 11px;
+  background: transparent; font-size: 14px; line-height: 1;
   color: var(--text2); cursor: pointer; transition: all 0.15s;
+  flex-shrink: 0;
 }
 .btn-add-item:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-bg); }
+.btn-add-item:active { border-color: var(--blue); color: var(--blue); background: var(--blue-bg); }
 
 /* 인라인 입력행 */
 .new-row td { padding: 5px 8px; background: var(--surface2); border-top: 0.5px solid var(--border2); }
@@ -376,11 +367,11 @@ body {
   line-height: 1;
 }
 .btn-nr-cl:hover { background: var(--red-bg); color: var(--red); border-color: var(--red); }
-.tv-cat { margin-bottom: 20px; padding-top: 4px; }
-.tv-cat-card { background: var(--surface); }
+.tv-cat { margin-bottom: 40px; padding-top: 4px; }
 .tv-cat-header {
-  display: flex; align-items: center; gap: 0;
-  padding: 0 0 10px; min-width: fit-content;
+  display: flex; align-items: center; gap: 10px;
+  padding: 0 0 10px;
+  position: sticky; left: 0;
 }
 .tv-cat-header-bar {
   width: 3px; height: 22px; border-radius: 0;
@@ -388,17 +379,18 @@ body {
 }
 .tv-cat-header-text {
   font-size: 14px; font-weight: 500; color: var(--text);
-  padding-left: 10px; flex: 1;
+  padding-left: 0px;
 }
 
 .tv-cat-card {
   border: 0.5px solid var(--border);
   border-radius: var(--radius-lg);
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 .tv-table {
   border-collapse: collapse; table-layout: fixed;
-  background: var(--surface);
+  background: var(--surface); min-width: 100%;
 }
 .tv-table-wrap {
   width: 100%; border-collapse: collapse; table-layout: auto;
@@ -415,6 +407,14 @@ body {
   padding: 8px 14px; font-size: 12px; border-bottom: 1px solid var(--border);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+.tv-col-name { position: sticky; left: 0; z-index: 2; background: inherit; }
+.tv-col-ref  { position: sticky; left: var(--tv-name-w, 160px); z-index: 2; background: inherit; box-shadow: 2px 0 3px rgba(0,0,0,0.05); }
+.tv-table thead .tv-col-name,
+.tv-table thead .tv-col-ref  { background: var(--surface2); }
+.tv-table tbody tr .tv-col-name,
+.tv-table tbody tr .tv-col-ref  { background: var(--surface); }
+.tv-table tbody tr:hover .tv-col-name,
+.tv-table tbody tr:hover .tv-col-ref  { background: var(--surface2); }
 .tv-table tr:last-child td { border-bottom: none; }
 .tv-table thead tr { cursor: default; }
 .tv-table tbody tr { cursor: pointer; transition: background 0.1s; }
@@ -429,7 +429,7 @@ body {
 /* 상세 뷰 뒤로가기 */
 .back-btn {
   display: inline-flex; align-items: center; gap: 4px;
-  padding: 5px 10px; margin: 16px 20px 0;
+  padding: 5px 10px; margin: 0;
   border: 1px solid var(--border2); border-radius: var(--radius);
   background: var(--surface); color: var(--text2);
   font-size: 12px; cursor: pointer; transition: background 0.1s;
@@ -704,6 +704,63 @@ const DRIVE_DATA_FILE   = 'checkup-data.json';        // 데이터 저장 파일
 
 <!-- Toast -->
 <div class="toast" id="toast"></div>
+
+<!-- 카테고리 추가 모달 -->
+<div class="modal-bg" id="catModal" style="display:none">
+  <div class="modal" style="width:300px;">
+    <h2>카테고리 추가</h2>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:16px;">추가할 카테고리 이름을 입력하세요</p>
+    <input class="search-input" id="catModalInput" type="text" placeholder="카테고리명"
+      style="width:100%;margin-bottom:16px;"
+      onkeydown="if(event.key==='Enter')confirmAddCategory()">
+    <div class="modal-btns">
+      <button class="btn" onclick="closeCatModal()">취소</button>
+      <button class="btn btn-primary" onclick="confirmAddCategory()">추가</button>
+    </div>
+  </div>
+</div>
+
+<!-- 항목 추가/수정 모달 -->
+<div class="modal-bg" id="itemModal" style="display:none">
+  <div class="modal" style="width:360px;max-height:90vh;overflow-y:auto;">
+    <h2 id="itemModalTitle">항목 추가</h2>
+    <p id="itemModalSub" style="font-size:12px;color:var(--text2);margin-bottom:16px;"></p>
+
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <div style="flex:1;">
+        <label style="font-size:11px;font-weight:500;color:var(--text2);display:block;margin-bottom:4px;">항목명</label>
+        <input class="search-input" id="im-name" type="text" placeholder="예: 안저 (좌)" style="width:100%;">
+      </div>
+      <div style="width:70px;">
+        <label style="font-size:11px;font-weight:500;color:var(--text2);display:block;margin-bottom:4px;">단위</label>
+        <input class="search-input" id="im-unit" type="text" placeholder="mmHg" style="width:100%;">
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-bottom:16px;">
+      <div style="flex:1;">
+        <label style="font-size:11px;font-weight:500;color:var(--text2);display:block;margin-bottom:4px;">정상 최솟값</label>
+        <input class="search-input" id="im-min" type="text" inputmode="decimal" placeholder="0" style="width:100%;">
+      </div>
+      <div style="flex:1;">
+        <label style="font-size:11px;font-weight:500;color:var(--text2);display:block;margin-bottom:4px;">정상 최댓값</label>
+        <input class="search-input" id="im-max" type="text" inputmode="decimal" placeholder="999 = 없음" style="width:100%;">
+      </div>
+    </div>
+
+    <div style="border-top:0.5px solid var(--border);padding-top:14px;margin-bottom:14px;">
+      <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">연도별 값</div>
+      <div id="im-years" style="display:flex;flex-direction:column;gap:8px;"></div>
+    </div>
+
+    <div class="modal-btns">
+      <button class="btn" id="imDelBtn" style="color:var(--red);border-color:var(--red);display:none" onclick="confirmItemDelete()">삭제</button>
+      <div style="flex:1"></div>
+      <button class="btn" onclick="closeItemModal()">취소</button>
+      <button class="btn btn-primary" onclick="confirmItemModal()">저장</button>
+    </div>
+  </div>
+</div>
 
 <!-- 설정 팝업 -->
 <div class="settings-overlay" id="settingsOverlay" style="display:none" onclick="closeSettings()"></div>
@@ -1752,25 +1809,13 @@ function newRowHtml(catId, itemId) {
 }
 
 function showAddRow(catId) {
-  if (document.querySelector('.new-row')) return; // 이미 편집 중
-  const tbl = document.getElementById('tbl-'+catId);
-  if (!tbl) return;
-  tbl.querySelector('tbody').insertAdjacentHTML('beforeend', newRowHtml(catId, null));
-  // 모든 + 항목 추가 버튼 비활성화
-  document.querySelectorAll('.btn-add-item').forEach(b => {
-    b.disabled = true; b.style.opacity = '0.4'; b.style.pointerEvents = 'none';
-  });
-  setTimeout(() => document.getElementById('nr-name-'+catId)?.focus(), 50);
+  openItemModal(catId, null);
 }
 
 function showEditRow(itemId) {
   const item = ITEMS.find(i => i.id === itemId);
   if (!item) return;
-  removeNewRow(item.cat);
-  const tbl = document.getElementById('tbl-'+item.cat);
-  if (!tbl) return;
-  tbl.querySelector('tbody').insertAdjacentHTML('beforeend', newRowHtml(item.cat, itemId));
-  setTimeout(() => document.getElementById('nr-name-'+item.cat)?.focus(), 50);
+  openItemModal(item.cat, itemId);
 }
 
 function removeNewRow(catId) {
@@ -1800,6 +1845,109 @@ function confirmAddRow(catId) {
   removeNewRow(catId);
   saveState(); renderSidebar(); renderTableView();
   showToast(`"${name}" 항목이 추가됐습니다`);
+}
+
+// ── 항목 추가/수정 모달 ──
+let itemModalCatId  = null;
+let itemModalItemId = null;
+
+function openItemModal(catId, itemId) {
+  itemModalCatId  = catId;
+  itemModalItemId = itemId;
+  const item = itemId ? ITEMS.find(i => i.id === itemId) : null;
+  const cat  = CATEGORIES.find(c => c.id === catId);
+
+  document.getElementById('itemModalTitle').textContent = item ? '항목 수정' : '항목 추가';
+  document.getElementById('itemModalSub').textContent   = cat ? cat.label + ' 카테고리' : '';
+  document.getElementById('im-name').value = item?.name  || '';
+  document.getElementById('im-unit').value = item?.unit  || '';
+  document.getElementById('im-min').value  = (item && item.refMin !== 0)   ? item.refMin : '';
+  document.getElementById('im-max').value  = (item && item.refMax !== 999) ? item.refMax : '';
+
+  // 삭제 버튼 (수정 시만 표시)
+  document.getElementById('imDelBtn').style.display = item ? 'inline-flex' : 'none';
+
+  // 연도별 입력칸
+  const yearsDiv = document.getElementById('im-years');
+  yearsDiv.innerHTML = years.map(y => {
+    const v = item ? (data[y]?.[itemId] ?? '') : '';
+    return `<div style="display:flex;align-items:center;gap:10px;">
+      <span style="font-size:12px;font-weight:500;width:44px;flex-shrink:0;">${y}</span>
+      <input class="search-input" type="text" inputmode="decimal" data-year="${y}"
+        placeholder="—" value="${v}" style="flex:1;">
+    </div>`;
+  }).join('');
+
+  document.getElementById('itemModal').style.display = 'flex';
+  setTimeout(() => document.getElementById('im-name').focus(), 50);
+}
+
+function closeItemModal() {
+  document.getElementById('itemModal').style.display = 'none';
+  itemModalCatId = null; itemModalItemId = null;
+}
+
+function confirmItemModal() {
+  const name = document.getElementById('im-name').value.trim();
+  if (!name) { showToast('항목명을 입력하세요'); return; }
+  const unit   = document.getElementById('im-unit').value.trim();
+  const refMin = parseFloat(document.getElementById('im-min').value) || 0;
+  const refMax = parseFloat(document.getElementById('im-max').value) || 999;
+
+  if (itemModalItemId) {
+    // 수정
+    const item = ITEMS.find(i => i.id === itemModalItemId);
+    if (item) {
+      item.name = name; item.unit = unit;
+      item.refMin = refMin; item.refMax = refMax;
+    }
+  } else {
+    // 추가
+    const norm  = s => s.toLowerCase().replace(/[\s\-_()]/g,'');
+    const newId = 'manual_' + norm(name).substring(0,10) + '_' + Date.now().toString(36);
+    ITEMS.push({ id: newId, cat: itemModalCatId, name, unit, refMin, refMax });
+    itemModalItemId = newId;
+  }
+
+  // 연도별 값 저장
+  document.querySelectorAll('#im-years input[data-year]').forEach(inp => {
+    const y = inp.dataset.year;
+    const v = parseFloat(inp.value);
+    if (!data[y]) data[y] = {};
+    if (!isNaN(v)) data[y][itemModalItemId] = v;
+    else delete data[y]?.[itemModalItemId];
+  });
+
+  const editedId = itemModalItemId;
+  const isEdit   = !!itemModalItemId;
+  closeItemModal();
+  saveState(); renderSidebar(); renderTableView();
+  // 수정이면 상세창 유지, 추가면 메인 유지
+  if (isEdit && activeId === editedId) renderDetail(editedId);
+  showToast('"' + name + '" 저장됐습니다');
+}
+
+function confirmItemDelete() {
+  const item = ITEMS.find(i => i.id === itemModalItemId);
+  if (!item) return;
+  if (!confirm(`"${item.name}" 항목을 삭제할까요?`)) return;
+  ITEMS = ITEMS.filter(i => i.id !== itemModalItemId);
+  closeItemModal();
+  activeId = null;
+  saveState(); renderSidebar(); renderTableView();
+  showToast(`"${item.name}" 삭제됐습니다`);
+}
+
+function deleteItemFromDetail(itemId) {
+  const item = ITEMS.find(i => i.id === itemId);
+  if (!item) return;
+  if (!confirm('"' + item.name + '" 항목을 삭제할까요?')) return;
+  ITEMS = ITEMS.filter(i => i.id !== itemId);
+  activeId = null;
+  saveState();
+  renderSidebar();
+  renderTableView(); // 내부에서 savedScrollTop 복원
+  showToast('"' + item.name + '" 삭제됐습니다');
 }
 
 function moveItem(itemId, dir) {
@@ -1843,6 +1991,8 @@ function confirmEditRow(catId, itemId) {
 
   removeNewRow(catId);
   saveState(); renderSidebar(); renderTableView();
+  // 수정 완료 후 상세 화면 갱신
+  if (activeId === itemId) renderDetail(itemId);
   showToast(`"${name}" 항목이 수정됐습니다`);
 }
 
@@ -1962,7 +2112,7 @@ function renderSidebar() {
         <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${cat.label}</span>
         <span class="cat-arrow">▾</span>
       </span>
-      <button class="cat-del-btn" onclick="deleteCat('${cat.id}')" title="카테고리 삭제">✕</button>
+      <button class="cat-del-btn" onclick="event.stopPropagation();deleteCat('${cat.id}')" title="카테고리 삭제">✕</button>
     </div>`;
     if (!closed) {
       for (const item of items) {
@@ -1980,18 +2130,35 @@ function renderSidebar() {
 }
 
 function addCategory() {
-  // 카테고리N 자동 넘버링
+  // 기본값: 카테고리N 자동 넘버링
   const usedNums = CATEGORIES
     .map(c => c.label.match(/^카테고리(\d+)$/))
     .filter(Boolean).map(m => parseInt(m[1]));
   let n = 1;
   while (usedNums.includes(n)) n++;
+  const input = document.getElementById('catModalInput');
+  if (input) input.value = '카테고리' + n;
+  document.getElementById('catModal').style.display = 'flex';
+  setTimeout(() => {
+    if (input) { input.focus(); input.select(); }
+  }, 50);
+}
+
+function closeCatModal() {
+  document.getElementById('catModal').style.display = 'none';
+  document.getElementById('catModalInput').value = '';
+}
+
+function confirmAddCategory() {
+  const name = document.getElementById('catModalInput').value.trim();
+  if (!name) { showToast('카테고리명을 입력하세요'); return; }
   const newId = 'custom_cat_' + Date.now().toString(36);
-  CATEGORIES.push({ id: newId, label: '카테고리' + n });
+  CATEGORIES.push({ id: newId, label: name });
+  closeCatModal();
   saveState();
   renderSidebar();
   renderTableView();
-  showToast('카테고리' + n + ' 추가됐습니다');
+  showToast('"' + name + '" 카테고리가 추가됐습니다');
 }
 
 function deleteCat(catId) {
@@ -2121,6 +2288,9 @@ function onTouchDragEnd(e) {
 }
 
 function selectItem(id) {
+  // 현재 스크롤 위치 저장
+  const detail = document.getElementById('detail');
+  if (detail) savedScrollTop = detail.scrollTop;
   activeId = id;
   renderSidebar();
   renderDetail(id);
@@ -2128,6 +2298,7 @@ function selectItem(id) {
 
 // ── 전체 항목 테이블 뷰 ──
 let searchKeyword = '';
+let savedScrollTop = 0; // 메인 스크롤 위치 저장
 
 function doSearch() {
   searchKeyword = document.getElementById('searchInput').value.trim();
@@ -2156,8 +2327,7 @@ function renderTableView() {
     return w;
   }
   const maxNameW = ITEMS.reduce((mx, i) => Math.max(mx, measureText(i.name)), 80);
-  const nameColW = Math.round(maxNameW * 1.1) + 24; // 110% + padding
-  const refOffset = Math.round(nameColW / 2); // 정상범위 간격 조정용
+  const nameColW = Math.round(maxNameW * 1.1) + 4; // 110% + padding - 20px
   document.documentElement.style.setProperty('--tv-name-w', nameColW + 'px');
 
   // 연도 헤더
@@ -2204,37 +2374,30 @@ function renderTableView() {
 
       const isManual = item.id.startsWith('item_') || item.id.startsWith('manual_');
       rows += `<tr onclick="selectItem('${item.id}')">
-        <td>
-          <span style="display:flex;align-items:center;gap:4px;">
-            <span>${item.name}${isManual ? '<span class="tag-m">수동</span>' : ''}</span>
-            <span class="row-actions" onclick="event.stopPropagation()">
-              <button class="ic" onclick="event.stopPropagation();showEditRow('${item.id}')" title="수정">✎</button>
-              <button class="ic ic-del" onclick="event.stopPropagation();if(confirm('&quot;${item.name}&quot; 항목을 삭제할까요?')){ITEMS=ITEMS.filter(i=>i.id!=='${item.id}');saveState();renderSidebar();renderTableView();showToast('삭제됐습니다');}" title="삭제">✕</button>
-            </span>
-          </span>
-        </td>
-        <td style="color:var(--text3);font-size:11px;padding-left:0;">${fmtRef(item)}</td>
+        <td class="tv-col-name">${item.name}${isManual ? '<span class="tag-m">수동</span>' : ''}</td>
+        <td class="tv-col-ref" style="color:var(--text3);font-size:11px;padding-left:14px;">${fmtRef(item)}</td>
         ${cells}
         <td style="width:100%"></td>
       </tr>`;
     }
 
-    html += `<div class="tv-cat" style="min-width:${tableMinW}px;">
+    html += `<div class="tv-cat">
       <div class="tv-cat-header">
         <div class="tv-cat-header-bar"></div>
         <span class="tv-cat-header-text">${cat.label}</span>
-        <button class="btn-add-item" onclick="showAddRow('${cat.id}')">＋ 항목 추가</button>
+        <button class="btn-add-item" onclick="showAddRow('${cat.id}')" title="항목 추가">＋</button>
       </div>
-      <div class="tv-cat-card" style="min-width:${tableMinW}px;"><table class="tv-table" style="width:${tableMinW}px;" id="tbl-${cat.id}">
+      <div class="tv-cat-card"><table class="tv-table" id="tbl-${cat.id}">
         <thead><tr style="background:var(--surface2)">
         <colgroup>
-          <col style="width:${nameColW}px"><col style="width:130px">
-          ${visYears.map(() => '<col style="width:110px">').join('')}
-          <col>
+          <col style="width:${nameColW}px;min-width:${nameColW}px;">
+          <col style="width:130px;min-width:130px;">
+          ${visYears.map(() => '<col style="width:110px;min-width:110px;">').join('')}
+          <col style="min-width:20px;">
         </colgroup>
         <thead><tr>
-          <th style="padding:7px 14px;font-size:11px;font-weight:500;color:var(--text3);border-bottom:0.5px solid var(--border)">항목</th>
-          <th style="padding:7px 0 7px 0;font-size:11px;font-weight:500;color:var(--text3);border-bottom:0.5px solid var(--border)">정상범위</th>
+          <th class="tv-col-name" style="padding:7px 14px;font-size:11px;font-weight:500;color:var(--text3);border-bottom:0.5px solid var(--border)">항목</th>
+          <th class="tv-col-ref" style="padding:7px 0 7px 14px;font-size:11px;font-weight:500;color:var(--text3);border-bottom:0.5px solid var(--border)">정상범위</th>
           ${visYears.map(y => `<th style="padding:7px 14px;font-size:11px;font-weight:500;color:var(--text3);border-bottom:0.5px solid var(--border)">${y}${y === latestY ? ' ★' : ''}</th>`).join('')}
           <th style="width:100%;border-bottom:0.5px solid var(--border)"></th>
         </tr></thead>
@@ -2247,6 +2410,11 @@ function renderTableView() {
   document.getElementById('detail').innerHTML = html;
   activeId = null;
   renderSidebar();
+  // 스크롤 위치 복원
+  requestAnimationFrame(() => {
+    const detail = document.getElementById('detail');
+    if (detail) detail.scrollTop = savedScrollTop;
+  });
 }
 
 function renderDetail(id) {
@@ -2285,9 +2453,14 @@ function renderDetail(id) {
   });
 
   document.getElementById('detail').innerHTML = `
-    <div class="back-btn" onclick="renderTableView()">&#8592; 목록으로</div>
+    <div style="display:flex;align-items:center;padding:16px 20px 0;gap:8px;">
+      <div class="back-btn" onclick="renderTableView()" style="margin:0;">&#8592; 목록으로</div>
+      <div style="flex:1;"></div>
+      <button class="btn" onclick="openItemModal('${item.cat}','${item.id}')" style="font-size:12px;padding:5px 12px;">수정</button>
+      <button class="btn" onclick="deleteItemFromDetail('${item.id}')" style="font-size:12px;padding:5px 12px;color:var(--red);border-color:var(--red);">삭제</button>
+    </div>
     <div class="detail-inner">
-      <div>
+      <div id="detail-item-name-wrap">
         <div class="detail-title">${item.name}</div>
         <span class="ref-badge">정상범위 ${fmtRef(item)}</span>
       </div>
