@@ -2327,7 +2327,7 @@ function renderTableView() {
     return w;
   }
   const maxNameW = ITEMS.reduce((mx, i) => Math.max(mx, measureText(i.name)), 80);
-  const nameColW = Math.round(maxNameW * 1.1) + 4; // 110% + padding - 20px
+  const nameColW = Math.round(maxNameW * 1.1) - 36; // 110% + padding - 60px
   document.documentElement.style.setProperty('--tv-name-w', nameColW + 'px');
 
   // 연도 헤더
