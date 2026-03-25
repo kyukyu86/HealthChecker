@@ -232,6 +232,8 @@ body {
   cursor: pointer; user-select: none;
 }
 .cat-header:first-child { border-top: none; }
+.cat-header:hover { background: var(--surface2); filter: brightness(0.97); }
+.cat-toggle { cursor: pointer; }
 .cat-arrow { font-size: 9px; transition: transform 0.2s; margin-left: 4px; color: var(--text3); }
 .cat-header.closed .cat-arrow { transform: rotate(-90deg); }
 .cat-del-btn {
@@ -2095,9 +2097,9 @@ function deleteYear(e, y) {
 function renderSidebar() {
   let html = '';
   for (const cat of CATEGORIES) {
-    const items  = ITEMS.filter(i => i.cat === cat.id);
-    const closed = collapsedCats[cat.id];
-    html += `<div class="cat-header ${closed?'closed':''}"
+    const items = ITEMS.filter(i => i.cat === cat.id);
+    const cnt   = items.length;
+    html += `<div class="cat-header"
       data-catid="${cat.id}"
       ondragover="onCatDragOver(event,'${cat.id}')"
       ondragleave="onCatDragLeave(event)"
@@ -2108,25 +2110,31 @@ function renderSidebar() {
         ontouchstart="onTouchDragStart(event,'${cat.id}')"
         ontouchmove="onTouchDragMove(event)"
         ontouchend="onTouchDragEnd(event)">⠿</span>
-      <span class="cat-toggle" onclick="toggleCat('${cat.id}')" style="flex:1;display:flex;align-items:center;gap:4px;min-width:0;">
+      <span class="cat-toggle" onclick="scrollToCat('${cat.id}')" style="flex:1;display:flex;align-items:center;gap:4px;min-width:0;">
         <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${cat.label}</span>
-        <span class="cat-arrow">▾</span>
+        ${cnt > 0 ? `<span style="font-size:10px;color:var(--text3);flex-shrink:0;">${cnt}</span>` : ''}
       </span>
       <button class="cat-del-btn" onclick="event.stopPropagation();deleteCat('${cat.id}')" title="카테고리 삭제">✕</button>
     </div>`;
-    if (!closed) {
-      for (const item of items) {
-        const st = worstStatus(item);
-        const dotCls = st==='danger'?'dot-danger':st==='warning'?'dot-warning':st==='normal'?'dot-normal':'dot-none';
-        html += `<div class="item-btn ${activeId===item.id?'active':''}" onclick="selectItem('${item.id}')">
-          <span class="status-dot ${dotCls}"></span>
-          <span class="item-label">${item.name}</span>
-          <span class="item-del" onclick="event.stopPropagation();deleteItem(event,'${item.id}')" title="항목 삭제">✕</span>
-        </div>`;
-      }
-    }
   }
   document.getElementById('sidebar').innerHTML = html;
+}
+
+function scrollToCat(catId) {
+  // 상세창이면 메인으로 먼저 이동
+  if (activeId) {
+    activeId = null;
+    renderTableView();
+    setTimeout(() => scrollToCat(catId), 80);
+    return;
+  }
+  // tv-cat div에 id 부여해서 스크롤
+  const el = document.getElementById('tv-cat-' + catId);
+  if (!el) return;
+  const detail = document.getElementById('detail');
+  if (!detail) return;
+  const offset = el.offsetTop - detail.offsetTop - 16;
+  detail.scrollTo({ top: offset, behavior: 'smooth' });
 }
 
 function addCategory() {
@@ -2381,7 +2389,7 @@ function renderTableView() {
       </tr>`;
     }
 
-    html += `<div class="tv-cat">
+    html += `<div class="tv-cat" id="tv-cat-${cat.id}">
       <div class="tv-cat-header">
         <div class="tv-cat-header-bar"></div>
         <span class="tv-cat-header-text">${cat.label}</span>
